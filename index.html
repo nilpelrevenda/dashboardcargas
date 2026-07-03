@@ -216,6 +216,70 @@ html.light-mode {
 </head>
 <body>
 
+<!-- ===== LOGIN OVERLAY ===== -->
+<div id="login-overlay" style="
+  position:fixed;inset:0;z-index:9999;
+  background:var(--bg,#f5f5f3);
+  display:flex;align-items:center;justify-content:center;
+  font-family:inherit;
+">
+  <div style="
+    background:var(--surface,#fff);
+    border:.5px solid var(--border-strong,rgba(0,0,0,.18));
+    border-radius:12px;
+    padding:2.5rem 2rem;
+    width:320px;
+    box-shadow:0 4px 24px rgba(0,0,0,.08);
+    text-align:center;
+  ">
+    <div style="font-size:28px;margin-bottom:.5rem">&#128202;</div>
+    <h2 style="font-size:17px;font-weight:600;margin-bottom:.25rem;color:var(--text,#1a1a18)">Dashboard Revenda</h2>
+    <p style="font-size:12px;color:var(--text-muted,#888);margin-bottom:1.5rem">Cargas &times; Pedidos</p>
+    <input id="login-pwd" type="password" placeholder="Senha de acesso"
+      style="width:100%;padding:10px 12px;border:.5px solid var(--border-strong,rgba(0,0,0,.2));
+      border-radius:8px;font-size:14px;font-family:inherit;outline:none;
+      background:var(--surface2,#f0efeb);color:var(--text,#1a1a18);
+      box-sizing:border-box;margin-bottom:.75rem;"
+      onkeydown="if(event.key==='Enter')doLogin()"
+    />
+    <div id="login-err" style="display:none;color:#E24B4A;font-size:12px;margin-bottom:.75rem">
+      Senha incorreta. Tente novamente.
+    </div>
+    <button onclick="doLogin()" style="
+      width:100%;padding:10px;background:#378ADD;color:#fff;
+      border:none;border-radius:8px;font-size:14px;font-family:inherit;
+      font-weight:500;cursor:pointer;
+    ">Entrar</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var PWD = 'revenda2026';
+  var KEY = 'dash_auth';
+  function doLogin(){
+    var v = document.getElementById('login-pwd').value;
+    if(v === PWD){
+      sessionStorage.setItem(KEY,'1');
+      document.getElementById('login-overlay').style.display='none';
+      document.getElementById('login-err').style.display='none';
+    } else {
+      document.getElementById('login-err').style.display='block';
+      document.getElementById('login-pwd').value='';
+      document.getElementById('login-pwd').focus();
+    }
+  }
+  window.doLogin = doLogin;
+  // Check if already authenticated this session
+  if(sessionStorage.getItem(KEY)==='1'){
+    document.addEventListener('DOMContentLoaded',function(){
+      var el=document.getElementById('login-overlay');
+      if(el) el.style.display='none';
+    });
+  }
+})();
+</script>
+
 <header>
   <h1><i class="ti ti-chart-bar" aria-hidden="true"></i> Dashboard Revenda &mdash; Cargas x Pedidos</h1>
   <button id="btn-dados" onclick="openModal()" style="display:none"></button>
