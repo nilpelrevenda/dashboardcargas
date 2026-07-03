@@ -1147,7 +1147,7 @@ html.light-mode {
 
 <script>
 var SUPA_URL = "https://hqfyimjlvyomxbyizpie.supabase.co";
-var SUPA_ANON = "sb_publishable_LRnTW1MpmDXSwMIy2TPV3g_q-D1zVa6";
+var SUPA_ANON = "sb_publishable_HxFZpxfxb4s7RQFK8LHP_A__By4K3X0";
 var _authToken = null; // set after login
 function getHeaders(){
   var token = _authToken || SUPA_ANON;
@@ -1163,14 +1163,19 @@ async function doLogin(){
   btn.textContent='Entrando...'; btn.disabled=true;
   err.style.display='none';
   try {
-    var res = await fetch(SUPA_URL+'/auth/v1/token?grant_type=password', {
+    // Try new Supabase key format first, fallback to legacy
+    var authRes = await fetch(SUPA_URL+'/auth/v1/token?grant_type=password', {
       method:'POST',
-      headers:{'Content-Type':'application/json','apikey':SUPA_ANON},
+      headers:{
+        'Content-Type':'application/json',
+        'apikey':SUPA_ANON,
+        'Authorization':'Bearer '+SUPA_ANON
+      },
       body:JSON.stringify({email:email,password:pwd})
     });
-    var data = await res.json();
-    if(!res.ok || !data.access_token){
-      throw new Error(data.error_description||data.msg||'Credenciais inválidas.');
+    var data = await authRes.json();
+    if(!authRes.ok || !data.access_token){
+      throw new Error(data.error_description||data.msg||data.message||'Credenciais inválidas.');
     }
     _authToken = data.access_token;
     // Store for session (not localStorage — sessionStorage only)
