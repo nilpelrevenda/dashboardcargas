@@ -1705,22 +1705,19 @@ document.getElementById("mes-select").addEventListener("change",function(){rende
 if(sessionStorage.getItem('supa_token')){
   _authToken = sessionStorage.getItem('supa_token');
 }
-if(_authToken){
-loadFromSupabase().then(function(){
-  renderMensal();
-  updateBtn();
-  // Also load registros (pedidos perdidos)
-  loadCruzamento().then(function(){
-    if(document.getElementById('tab-cruzamento') &&
-       document.getElementById('tab-cruzamento').classList.contains('active')){
-      renderCruzamento(_cxRegistros);
-    }
-  }).catch(function(){});
-}).catch(function(){
-  renderMensal();
-  updateBtn();
-});
-} // end if(_authToken)
+document.addEventListener('DOMContentLoaded', function(){
+  if(_authToken){
+    loadFromSupabase().then(function(){
+      renderMensal();
+      updateBtn();
+      loadCruzamento().catch(function(){});
+    }).catch(function(e){
+      console.error('Supabase load error:', e);
+      renderMensal();
+      updateBtn();
+    });
+  }
+}); // end DOMContentLoaded
 // Load persisted data from IDB and Supabase
 loadPersistedData();
 supaLoadCargas();
