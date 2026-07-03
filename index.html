@@ -226,65 +226,44 @@ html.light-mode {
   <div style="
     background:var(--surface,#fff);
     border:.5px solid var(--border-strong,rgba(0,0,0,.18));
-    border-radius:12px;
-    padding:2.5rem 2rem;
-    width:320px;
-    box-shadow:0 4px 24px rgba(0,0,0,.08);
-    text-align:center;
+    border-radius:12px;padding:2.5rem 2rem;width:340px;
+    box-shadow:0 4px 24px rgba(0,0,0,.08);text-align:center;
   ">
     <div style="font-size:28px;margin-bottom:.5rem">&#128202;</div>
     <h2 style="font-size:17px;font-weight:600;margin-bottom:.25rem;color:var(--text,#1a1a18)">Dashboard Revenda</h2>
-    <p style="font-size:12px;color:var(--text-muted,#888);margin-bottom:1.5rem">Cargas &times; Pedidos</p>
-    <input id="login-pwd" type="password" placeholder="Senha de acesso"
+    <p style="font-size:12px;color:var(--text-muted,#888);margin-bottom:1.5rem">Cargas &times; Pedidos &mdash; Acesso restrito</p>
+    <input id="login-email" type="email" placeholder="E-mail"
+      style="width:100%;padding:10px 12px;border:.5px solid var(--border-strong,rgba(0,0,0,.2));
+      border-radius:8px;font-size:14px;font-family:inherit;outline:none;
+      background:var(--surface2,#f0efeb);color:var(--text,#1a1a18);
+      box-sizing:border-box;margin-bottom:.5rem;"
+      onkeydown="if(event.key==='Enter')document.getElementById('login-pwd').focus()"
+    />
+    <input id="login-pwd" type="password" placeholder="Senha"
       style="width:100%;padding:10px 12px;border:.5px solid var(--border-strong,rgba(0,0,0,.2));
       border-radius:8px;font-size:14px;font-family:inherit;outline:none;
       background:var(--surface2,#f0efeb);color:var(--text,#1a1a18);
       box-sizing:border-box;margin-bottom:.75rem;"
       onkeydown="if(event.key==='Enter')doLogin()"
     />
-    <div id="login-err" style="display:none;color:#E24B4A;font-size:12px;margin-bottom:.75rem">
-      Senha incorreta. Tente novamente.
-    </div>
-    <button onclick="doLogin()" style="
+    <div id="login-err" style="display:none;color:#E24B4A;font-size:12px;margin-bottom:.75rem;text-align:left;padding:0 2px"></div>
+    <button id="login-btn" onclick="doLogin()" style="
       width:100%;padding:10px;background:#378ADD;color:#fff;
       border:none;border-radius:8px;font-size:14px;font-family:inherit;
-      font-weight:500;cursor:pointer;
+      font-weight:500;cursor:pointer;transition:opacity .15s;
     ">Entrar</button>
+    <p style="font-size:11px;color:var(--text-muted,#aaa);margin-top:1rem">
+      Problemas de acesso? Fale com o administrador.
+    </p>
   </div>
 </div>
-
-<script>
-(function(){
-  var PWD = 'revenda2026';
-  var KEY = 'dash_auth';
-  function doLogin(){
-    var v = document.getElementById('login-pwd').value;
-    if(v === PWD){
-      sessionStorage.setItem(KEY,'1');
-      document.getElementById('login-overlay').style.display='none';
-      document.getElementById('login-err').style.display='none';
-    } else {
-      document.getElementById('login-err').style.display='block';
-      document.getElementById('login-pwd').value='';
-      document.getElementById('login-pwd').focus();
-    }
-  }
-  window.doLogin = doLogin;
-  // Check if already authenticated this session
-  if(sessionStorage.getItem(KEY)==='1'){
-    document.addEventListener('DOMContentLoaded',function(){
-      var el=document.getElementById('login-overlay');
-      if(el) el.style.display='none';
-    });
-  }
-})();
-</script>
 
 <header>
   <h1><i class="ti ti-chart-bar" aria-hidden="true"></i> Dashboard Revenda &mdash; Cargas x Pedidos</h1>
   <button id="btn-dados" onclick="openModal()" style="display:none"></button>
   <div class="header-right">
     <button onclick="openExport()" style="font-family:inherit;font-size:13px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);padding:5px 12px;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:6px"><i class="ti ti-download" style="font-size:14px"></i> Exportar</button>
+    <button onclick="doLogout()" title="Sair" style="font-family:inherit;font-size:13px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);padding:5px 10px;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:5px"><i class="ti ti-logout" style="font-size:14px"></i></button>
     <button onclick="clearPersistedData()" title="Apagar dados de vendas/cargas salvos neste navegador" style="font-family:inherit;font-size:13px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);padding:5px 10px;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:5px"><i class="ti ti-trash" style="font-size:14px"></i></button>
     <button id="btn-dark" onclick="toggleDark()" title="Alternar tema" style="font-family:inherit;font-size:13px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);padding:5px 10px;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:5px"><i class="ti ti-moon" id="dark-icon" style="font-size:15px"></i></button>
     <select id="ano-select"><option value="2025">2025</option><option value="2026" selected>2026</option></select>
@@ -1167,7 +1146,58 @@ html.light-mode {
 
 <script>
 var SUPA_URL = "https://hqfyimjlvyomxbyizpie.supabase.co";
-var SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZnlpbWpsdnlvbXhieWl6cGllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NzY3NTQsImV4cCI6MjA5NzM1Mjc1NH0.1Wr_1Q8DaEPhjNFqG0iV-p12F0xyKUtxGEUEH9aJBDg";
+var SUPA_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZnlpbWpsdnlvbXhieWl6cGllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3NzY3NTQsImV4cCI6MjA5NzM1Mjc1NH0.1Wr_1Q8DaEPhjNFqG0iV-p12F0xyKUtxGEUEH9aJBDg";
+var _authToken = null; // set after login
+function getHeaders(){
+  var token = _authToken || SUPA_ANON;
+  return {'Content-Type':'application/json','apikey':SUPA_ANON,'Authorization':'Bearer '+token};
+}
+// Login with Supabase Auth
+async function doLogin(){
+  var email = (document.getElementById('login-email').value||'').trim();
+  var pwd   = (document.getElementById('login-pwd').value||'');
+  var err   = document.getElementById('login-err');
+  var btn   = document.getElementById('login-btn');
+  if(!email||!pwd){ err.textContent='Preencha e-mail e senha.'; err.style.display='block'; return; }
+  btn.textContent='Entrando...'; btn.disabled=true;
+  err.style.display='none';
+  try {
+    var res = await fetch(SUPA_URL+'/auth/v1/token?grant_type=password', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPA_ANON},
+      body:JSON.stringify({email:email,password:pwd})
+    });
+    var data = await res.json();
+    if(!res.ok || !data.access_token){
+      throw new Error(data.error_description||data.msg||'Credenciais inválidas.');
+    }
+    _authToken = data.access_token;
+    // Store for session (not localStorage — sessionStorage only)
+    sessionStorage.setItem('supa_token', _authToken);
+    document.getElementById('login-overlay').style.display='none';
+    // Load data and render
+    loadFromSupabase().then(function(){
+      renderMensal(); updateBtn();
+      loadCruzamento().catch(function(){});
+    });
+  } catch(e){
+    err.textContent = e.message||'Erro ao fazer login.';
+    err.style.display='block';
+  }
+  btn.textContent='Entrar'; btn.disabled=false;
+}
+// Restore session if token exists
+(function(){
+  var t = sessionStorage.getItem('supa_token');
+  if(t){ _authToken = t; document.addEventListener('DOMContentLoaded',function(){
+    var el=document.getElementById('login-overlay'); if(el) el.style.display='none';
+  }); }
+})();
+// Logout function
+function doLogout(){
+  _authToken=null; sessionStorage.removeItem('supa_token');
+  location.reload();
+}
 
 
 
@@ -1665,7 +1695,11 @@ document.getElementById("mes-select").addEventListener("change",function(){rende
 })();
 
 // Load IndexedDB + Supabase cargas, then render
-// Load all data from Supabase then render
+// Load all data from Supabase then render (only if already authenticated)
+if(sessionStorage.getItem('supa_token')){
+  _authToken = sessionStorage.getItem('supa_token');
+}
+if(_authToken){
 loadFromSupabase().then(function(){
   renderMensal();
   updateBtn();
@@ -1680,6 +1714,7 @@ loadFromSupabase().then(function(){
   renderMensal();
   updateBtn();
 });
+} // end if(_authToken)
 // Load persisted data from IDB and Supabase
 loadPersistedData();
 supaLoadCargas();
@@ -2144,7 +2179,7 @@ async function loadCruzamento(){
   document.getElementById("cx-status").textContent = "Carregando dados...";
   try {
     var res = await fetch(SUPA_URL+"/rest/v1/registros?select=*&order=ts.asc", {
-      headers: {"Content-Type":"application/json","apikey":SUPA_KEY,"Authorization":"Bearer "+SUPA_KEY}
+      headers: getHeaders()
     });
     if(!res.ok) throw new Error("HTTP "+res.status);
     _cxRegistros = await res.json();
@@ -2651,13 +2686,12 @@ function loadPersistedData(){
    SUPABASE — persistência de cargas
    ============================================================ */
 var SUPA_CARGAS_TABLE = 'cargas';
-var SUPA_HEADERS_C = {'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY};
 
 async function supaInsertCarga(carga){
   try{
     await fetch(SUPA_URL+'/rest/v1/'+SUPA_CARGAS_TABLE,{
       method:'POST',
-      headers:Object.assign({},SUPA_HEADERS_C,{'Prefer':'return=minimal'}),
+      headers:Object.assign({},getHeaders(),{'Prefer':'return=minimal'}),
       body:JSON.stringify(carga)
     });
   } catch(e){ console.warn('Supabase carga insert error:',e); }
@@ -2666,14 +2700,14 @@ async function supaInsertCarga(carga){
 async function supaDeleteCargasMes(ano,mes){
   try{
     await fetch(SUPA_URL+'/rest/v1/'+SUPA_CARGAS_TABLE+'?ano=eq.'+ano+'&mes=eq.'+mes,{
-      method:'DELETE', headers:SUPA_HEADERS_C
+      method:'DELETE', headers:getHeaders()
     });
   } catch(e){ console.warn('Supabase carga delete error:',e); }
 }
 
 async function loadFromSupabase(){
   if(!SUPA_URL) return;
-  var h = {'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY};
+  var h = getHeaders();
 
   // Load vendas
   try {
@@ -2721,7 +2755,7 @@ async function loadFromSupabase(){
 function supaLoadCargas(){ return loadFromSupabase(); }
 
 async function saveVendasToSupabase(ano,mes,row){
-  var h=Object.assign({},SUPA_HEADERS_C,{'Prefer':'resolution=merge-duplicates,return=minimal'});
+  var h=Object.assign({},getHeaders(),{'Prefer':'resolution=merge-duplicates,return=minimal'});
   var MAT5=['Kraft','Duplex','Triplex','Papel Parana','Outros'];
   var payload=MAT5.map(function(mat,i){
     return{ano:ano,mes:mes,material:mat,kg:row[i].kg||0,fat:row[i].fat||0,
