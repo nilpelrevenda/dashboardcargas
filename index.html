@@ -1312,6 +1312,8 @@ function switchTab(name,btn){
 function renderMensal(){
   var ano=parseInt(document.getElementById("ano-select").value);
   var mes=parseInt(document.getElementById("mes-select").value);
+  // If DB not loaded yet from Supabase, skip
+  if(!DB[ano] || !DB[ano][mes]) return;
   var titulo=ML[mes]+" "+ano;
   document.getElementById("titulo-cargas").textContent=titulo;
   document.getElementById("titulo-vendas").textContent=titulo;
@@ -1372,23 +1374,23 @@ function renderMensal(){
   // ── Populate cargas KPIs ──────────────────────────────
   var dbRow = DB[ano]&&DB[ano][mes] ? DB[ano][mes] : null;
   var totalEstFim = dbRow ? dbRow.reduce(function(s,mat){return s+(mat.est_fim||0);},0) : 0;
-  if(totalEstFim>0) document.getElementById("m-estoque").textContent = kgf(totalEstFim);
+  if(totalEstFim>0){ var elEst=document.getElementById("m-estoque"); if(elEst) elEst.textContent=kgf(totalEstFim); }
   var kgPerdidoTotal = Object.keys(perdasMat).reduce(function(s,k){return s+perdasMat[k];},0);
+  function setEl(id,val){ var el=document.getElementById(id); if(el) el.textContent=val; }
   if(kgPerdidoTotal>0){
-    document.getElementById("m-perdidos").textContent = kgf(kgPerdidoTotal);
-    document.getElementById("m-perdidos-sub").textContent = "por falta de estoque";
+    setEl("m-perdidos", kgf(kgPerdidoTotal));
+    setEl("m-perdidos-sub", "por falta de estoque");
   }
   if(cm.length>0){
     var totalVolRec = cm.reduce(function(s,c){return s+c.rec_kg;},0);
     var atrasadas   = cm.filter(function(c){return c.atraso>0;});
     var noPrazo     = cm.filter(function(c){return c.atraso===0;});
-    document.getElementById("m-cargas").textContent    = cm.length;
-    document.getElementById("m-vol-rec").textContent   = kgf(totalVolRec);
-    document.getElementById("m-prazo").textContent     = noPrazo.length;
-    document.getElementById("m-atrasadas").textContent = atrasadas.length;
-    document.getElementById("m-atrasos").textContent     = atrasadas.length;
-    document.getElementById("m-atrasos-sub").textContent = atrasadas.length>0
-      ? atrasadas.length+" carga(s) atrasada(s)" : "todas no prazo";
+    setEl("m-cargas", cm.length);
+    setEl("m-vol-rec", kgf(totalVolRec));
+    setEl("m-prazo", noPrazo.length);
+    setEl("m-atrasadas", atrasadas.length);
+    setEl("m-atrasos", atrasadas.length);
+    setEl("m-atrasos-sub", atrasadas.length>0 ? atrasadas.length+" carga(s) atrasada(s)" : "todas no prazo");
   }
 
   var tc=document.getElementById("tbody-cargas");
