@@ -407,6 +407,7 @@ html.light-mode {
         <select id="hist-mat-sel" onchange="renderHistorico()" style="font-family:inherit;font-size:12px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);padding:4px 10px;color:var(--text)">
           <option value="ALL">Todos (total)</option>
           <option value="0">Kraft</option>
+          <option value="KM">Kraft Mono</option>
           <option value="1">Duplex</option>
           <option value="2">Triplex</option>
           <option value="3">Papel Paran&aacute;</option>
@@ -1264,6 +1265,68 @@ function makeMultiLine(id,labels,datasets){
   });
 }
 
+function makeBarRich(id, labels, fatData, kgData, colors){
+  var canvas = document.getElementById(id);
+  if(!canvas) return null;
+  canvas.style.height = canvas.style.height || '260px';
+  return makeChart(canvas, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Faturamento (R$)',
+          data: fatData,
+          backgroundColor: colors,
+          borderRadius: 4,
+          yAxisID: 'y'
+        },
+        {
+          label: 'Volume (kg)',
+          data: kgData,
+          backgroundColor: colors.map(function(c){return c+'55';}),
+          borderRadius: 4,
+          yAxisID: 'y2',
+          hidden: true  // hidden by default, visible on tooltip
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: function(c) {
+              var mi = c.dataIndex;
+              var fat = fatData[mi] || 0;
+              var kg  = kgData[mi]  || 0;
+              var avg = kg > 0 ? fat / kg : 0;
+              return [
+                'Faturamento: ' + brl(fat),
+                'Volume:      ' + kgf(kg),
+                'Média R$/kg: ' + brl(avg)
+              ];
+            },
+            title: function(items){ return labels[items[0].dataIndex]; }
+          }
+        }
+      },
+      scales: {
+        x: { ticks:{color:'#888',font:{size:11}}, grid:{display:false} },
+        y: {
+          ticks: { color:'#888', font:{size:11}, callback: function(v){ return brl(v); } },
+          grid:  { color:'rgba(128,128,128,.12)' }
+        },
+        y2: { display: false }
+      }
+    }
+  });
+}
+
 function makePie(id,labels,data,colors){
   return makeChart(document.getElementById(id),{
     type:"doughnut",
@@ -1439,8 +1502,14 @@ function renderMensal(){
   cFat=makeBar("chart-fat",MAT,fd,CORES,brl); renderLeg("leg-fat",MAT,CORES);
   cVol=makeBar("chart-vol",MAT,kd,CORES,kgf); renderLeg("leg-vol",MAT,CORES);
 
-  var ckd=CARGAS_DB[ano]&&CARGAS_DB[ano][mes]?MAT.map(function(m){return(CARGAS_DB[ano][mes]).filter(function(c){return c.material===m}).reduce(function(s,c){return s+c.rec_kg},0)}):[0,0,0,0,0];
-  cCargas=makeBar("chart-cargas",MAT,ckd,CORES,kgf); renderLeg("leg-carga",MAT,CORES);
+  // ckd_full: 7 materials for cargas chart (Kraft and Kraft Mono separate)
+  var CORES_C7 = ["#378ADD","#6AB0F5","#1D9E75","#68C19A","#D97706","#DC7B4B","#9370db"];
+  var ckd_full = CARGAS_DB[ano]&&CARGAS_DB[ano][mes]
+    ? MAT_CARGAS.map(function(m){return(CARGAS_DB[ano][mes]).filter(function(c){return c.material===m}).reduce(function(s,c){return s+c.rec_kg},0)})
+    : [0,0,0,0,0,0,0];
+  // ckd: 5 materials (collapsed) for comparativo chart
+  var ckd=CARGAS_DB[ano]&&CARGAS_DB[ano][mes]?MAT.map(function(m){return(CARGAS_DB[ano][mes]).filter(function(c){return normMatVendas(c.material)===m}).reduce(function(s,c){return s+c.rec_kg},0)}):[0,0,0,0,0];
+  cCargas=makeBar("chart-cargas",MAT_CARGAS,ckd_full,CORES_C7,kgf); renderLeg("leg-carga",MAT_CARGAS,CORES_C7);
   cCmp=makeGrouped("chart-cmp",MAT,[{label:"Recebido (kg)",data:ckd,color:C25},{label:"Vendido (kg)",data:kd,color:C26}],function(v){return v.toLocaleString("pt-BR",{maximumFractionDigits:0})+" kg"});
   renderLeg("leg-cmp",["Recebido (kg)","Vendido (kg)"],[C25,C26]);
 
@@ -1579,7 +1648,8 @@ function renderAnalises(){
   cAnMat=destroyChart(cAnMat);cAnPie=destroyChart(cAnPie);cAnTrend=destroyChart(cAnTrend);cAnSaz=destroyChart(cAnSaz);
 
   var fatMatTotal=MAT.map(function(_,mi){return DB[2025].reduce(function(s,row){return s+(row?row[mi].fat:0)},0)});
-  cAnMat=makeBar("chart-an-mat",MAT,fatMatTotal,CORES,brl);
+  var kgMatTotal=MAT.map(function(_,mi){return DB[2025].reduce(function(s,row){return s+(row?row[mi].kg:0)},0)});
+  cAnMat=makeBarRich("chart-an-mat",MAT,fatMatTotal,kgMatTotal,CORES);
   renderLeg("leg-an-mat",MAT,CORES);
   cAnPie=makePie("chart-an-pie",MAT,fatMatTotal,CORES);
   renderLeg("leg-an-pie",MAT.map(function(m,i){return m+" ("+((fatMatTotal[i]/fatTotal)*100).toFixed(1)+"%)"}),CORES);
@@ -1663,7 +1733,8 @@ function renderAnalises(){
 
   var labMS26=mesesDisp26.map(function(m){return MS[m]});
   var fatMat26=MAT.map(function(_,mi){return mesesDisp26.reduce(function(s,m){return s+DB[2026][m][mi].fat},0)});
-  cAnMat26=makeBar("chart-an-mat-26",MAT,fatMat26,CORES,brl);
+  var kgMat26=MAT.map(function(_,mi){return mesesDisp26.reduce(function(s,m){return s+DB[2026][m][mi].kg},0)});
+  cAnMat26=makeBarRich("chart-an-mat-26",MAT,fatMat26,kgMat26,CORES);
   renderLeg("leg-an-mat-26",MAT,CORES);
 
   cAnPie26=makePie("chart-an-pie-26",MAT,fatMat26,CORES);
@@ -2960,7 +3031,9 @@ function getVendidoSlot(slot, matIdx){
   var row = DB[slot.ano] && DB[slot.ano][slot.mes];
   if(!row) return 0;
   if(matIdx==='ALL') return row.reduce(function(s,v){return s+v.kg;},0);
+  if(matIdx==='KM') return 0; // Kraft Mono not tracked separately in vendas
   var i = parseInt(matIdx);
+  // For Kraft (i=0), vendas include both Kraft+Kraft Mono together — show total Kraft vendas
   return (row[i]) ? row[i].kg : 0;
 }
 
@@ -2975,9 +3048,18 @@ function getRecebidoSlot(slot, matIdx){
     return v&&v.rec_kg!=null?v.rec_kg:null;
   }
   // sum from cargas
-  var mi = matIdx==='ALL' ? null : parseInt(matIdx);
+  var mi = matIdx==='ALL' ? null : matIdx==='KM' ? 'KM' : parseInt(matIdx);
   var total = cargas.reduce(function(s,c){
-    if(mi!==null && normMat(c.material)!==MAT[mi]) return s;
+    if(mi==='KM'){
+      if(c.material!=='Kraft Mono') return s;
+    } else if(mi!==null){
+      // for Kraft (mi=0), exclude Kraft Mono
+      if(mi===0){
+        if(c.material==='Kraft Mono'||normMatVendas(c.material)!==MAT[0]) return s;
+      } else {
+        if(normMatVendas(c.material)!==MAT[mi]) return s;
+      }
+    }
     return s + (c.rec_kg||0);
   },0);
   return total > 0 ? total : null;
