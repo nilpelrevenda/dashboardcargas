@@ -407,6 +407,7 @@ html.light-mode {
         <select id="hist-mat-sel" onchange="renderHistorico()" style="font-family:inherit;font-size:12px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);padding:4px 10px;color:var(--text)">
           <option value="ALL">Todos (total)</option>
           <option value="0">Kraft</option>
+          <option value="KM">Kraft Mono</option>
           <option value="1">Duplex</option>
           <option value="2">Triplex</option>
           <option value="3">Papel Paran&aacute;</option>
@@ -3072,16 +3073,17 @@ function getRecebidoSlot(slot, matIdx){
     return v&&v.rec_kg!=null?v.rec_kg:null;
   }
   // sum from cargas
-  var mi = matIdx==='ALL' ? null : parseInt(matIdx);
+  var mi = matIdx==='ALL' ? null : matIdx==='KM' ? 'KM' : parseInt(matIdx);
   var total = cargas.reduce(function(s,c){
-    if(mi!==null){
-      var matName = MAT[mi]; // e.g. "Kraft Mono" for mi=1
+    if(mi==='KM'){
+      if(c.material!=='Kraft Mono') return s;
+    } else if(mi!==null){
       if(mi===0){
-        // Kraft: exclude Kraft Mono cargas
+        // Kraft only: exclude Kraft Mono
         if(c.material==='Kraft Mono') return s;
         if(normMatVendas(c.material)!=='Kraft') return s;
       } else {
-        if(normMatVendas(c.material)!==matName) return s;
+        if(normMatVendas(c.material)!==MAT[mi]) return s;
       }
     }
     return s + (c.rec_kg||0);
@@ -3143,34 +3145,39 @@ function renderHistorico(){
 
   // Main chart: lines (or bars for 25v26)
   // If viewing Kraft, split into Kraft vs Kraft Mono using KRAFT_SPLIT
-  var isKraftSplit = (matIdx==='0');
-  // Use exact kg values from Excel (KRAFT_SPLIT) as vendido
-  var vendidoKM = isKraftSplit ? slots.map(function(s){
-    var sp = KRAFT_SPLIT[s.ano]&&KRAFT_SPLIT[s.ano][s.mes];
-    return sp ? sp.kraftMono : null;
-  }) : null;
-  var vendidoK = isKraftSplit ? slots.map(function(s){
+  var isKraftSplit = (matIdx==='0' || matIdx==='KM');
+  // vendido: comes from KRAFT_SPLIT (exact Excel values)
+  var vendidoK  = (matIdx==='0'||matIdx==='KM') ? slots.map(function(s){
     var sp = KRAFT_SPLIT[s.ano]&&KRAFT_SPLIT[s.ano][s.mes];
     return sp ? sp.kraft : null;
   }) : null;
-  var recebidoKM = isKraftSplit ? slots.map(function(s){
+  var vendidoKM = (matIdx==='0'||matIdx==='KM') ? slots.map(function(s){
     var sp = KRAFT_SPLIT[s.ano]&&KRAFT_SPLIT[s.ano][s.mes];
     return sp ? sp.kraftMono : null;
   }) : null;
-  var recebidoK = isKraftSplit ? slots.map(function(s){
-    var sp = KRAFT_SPLIT[s.ano]&&KRAFT_SPLIT[s.ano][s.mes];
-    return sp ? sp.kraft : null;
+  // recebido: comes from CARGAS_DB via getRecebidoSlot
+  var recebidoK  = (matIdx==='0'||matIdx==='KM') ? slots.map(function(s){
+    return getRecebidoSlot(s, '0'); // Kraft cargas (excludes Kraft Mono)
+  }) : null;
+  var recebidoKM = (matIdx==='0'||matIdx==='KM') ? slots.map(function(s){
+    return getRecebidoSlot(s, 'KM'); // Kraft Mono cargas
   }) : null;
 
   var datasets;
-  if(isKraftSplit){
-    var ds_vk  = {label:'Kraft vendido (kg)',     data:vendidoK,  borderColor:'#378ADD', backgroundColor:useBar?vendColor:'transparent', pointRadius:4, pointBackgroundColor:'#378ADD', tension:0.3};
-    var ds_vkm = {label:'Kraft Mono vendido (kg)', data:vendidoKM, borderColor:'#6AB0F5', backgroundColor:useBar?'#6AB0F5':'transparent', pointRadius:4, pointBackgroundColor:'#6AB0F5', tension:0.3};
-    var ds_rk  = {label:'Kraft recebido (kg)',     data:recebidoK, borderColor:'#1D9E75', backgroundColor:useBar?recColor:'transparent',  pointRadius:4, pointBackgroundColor:'#1D9E75', tension:0.3, spanGaps:false};
-    var ds_rkm = {label:'Kraft Mono recebido (kg)',data:recebidoKM,borderColor:'#68C19A', backgroundColor:useBar?'#68C19A':'transparent', pointRadius:4, pointBackgroundColor:'#68C19A', tension:0.3, spanGaps:false};
-    if(useBar){[ds_vk,ds_vkm,ds_rk,ds_rkm].forEach(function(d){d.type='bar';d.borderRadius=3;delete d.tension;delete d.pointRadius;delete d.pointBackgroundColor;});}
-    else {[ds_vk,ds_vkm,ds_rk,ds_rkm].forEach(function(d){d.type='line';});}
-    datasets = [ds_vk, ds_vkm, ds_rk, ds_rkm];
+  if(matIdx==='KM'){
+    // Kraft Mono only
+    var ds_vkm2 = {label:'Kraft Mono vendido (kg)', data:vendidoKM, borderColor:'#6AB0F5', backgroundColor:useBar?'#6AB0F5':'transparent', pointRadius:4, pointBackgroundColor:'#6AB0F5', tension:0.3};
+    var ds_rkm2 = {label:'Kraft Mono recebido (kg)',data:recebidoKM,borderColor:'#1D9E75', backgroundColor:useBar?'#1D9E75':'transparent', pointRadius:4, pointBackgroundColor:'#1D9E75', tension:0.3, spanGaps:false};
+    if(useBar){[ds_vkm2,ds_rkm2].forEach(function(d){d.type='bar';d.borderRadius=3;delete d.tension;delete d.pointRadius;delete d.pointBackgroundColor;});}
+    else {ds_vkm2.type='line'; ds_rkm2.type='line';}
+    datasets = [ds_vkm2, ds_rkm2];
+  } else if(isKraftSplit){
+    // Kraft only (no Kraft Mono)
+    var ds_vk  = {label:'Kraft vendido (kg)',  data:vendidoK,  borderColor:'#378ADD', backgroundColor:useBar?vendColor:'transparent', pointRadius:4, pointBackgroundColor:'#378ADD', tension:0.3};
+    var ds_rk  = {label:'Kraft recebido (kg)', data:recebidoK, borderColor:'#1D9E75', backgroundColor:useBar?recColor:'transparent',  pointRadius:4, pointBackgroundColor:'#1D9E75', tension:0.3, spanGaps:false};
+    if(useBar){[ds_vk,ds_rk].forEach(function(d){d.type='bar';d.borderRadius=3;delete d.tension;delete d.pointRadius;delete d.pointBackgroundColor;});}
+    else {ds_vk.type='line'; ds_rk.type='line';}
+    datasets = [ds_vk, ds_rk];
   } else {
     var ds1 = { label:'Vendido (kg)', data:vendido,
       borderColor:'#378ADD', backgroundColor: useBar ? vendColor : 'transparent',
@@ -3199,10 +3206,10 @@ function renderHistorico(){
   var legColors = _histPeriodo==='25v26'
     ? ['#B5D4F4 → #378ADD','#C0DD97 → #1D9E75']
     : ['#B5D4F4','#1D9E75'];
-  if(isKraftSplit){
-    renderLeg('leg-hist',
-      ['Kraft vendido','Kraft Mono vendido','Kraft recebido','Kraft Mono recebido'],
-      ['#378ADD','#6AB0F5','#1D9E75','#68C19A']);
+  if(matIdx==='KM'){
+    renderLeg('leg-hist',['Kraft Mono vendido (kg)','Kraft Mono recebido (kg)'],['#6AB0F5','#1D9E75']);
+  } else if(isKraftSplit){
+    renderLeg('leg-hist',['Kraft vendido (kg)','Kraft recebido (kg)'],['#378ADD','#1D9E75']);
   } else {
     renderLeg('leg-hist',
       _histPeriodo==='25v26'
