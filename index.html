@@ -3086,7 +3086,7 @@ function getRecebidoSlot(slot, matIdx){
         if(normMatVendas(c.material)!==MAT[mi]) return s;
       }
     }
-    return s + (c.rec_kg||0);
+    return s + (c.rec_kg||c.prog_kg||0);
   },0);
   return total > 0 ? total : null;
 }
