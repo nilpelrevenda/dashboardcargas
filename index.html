@@ -1092,7 +1092,20 @@ html.light-mode {
           </table>
         </div>
         <div id="man-cargas" class="man-sub-panel" style="display:none">
-          <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Cargas recebidas em <strong id="manual-mes-label-carga">&mdash;</strong>. Registre cada carga separadamente.</p>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Cargas recebidas em <strong id="manual-mes-label-carga">&mdash;</strong>. Registre cada carga separadamente ou faça upload de um .xlsx.</p>
+
+          <!-- Upload xlsx cargas -->
+          <div id="carga-upload-area" onclick="document.getElementById('carga-file-input').click()"
+            ondragover="event.preventDefault()" ondrop="event.preventDefault();handleCargaFile(event.dataTransfer.files[0])"
+            style="border:1.5px dashed var(--border-strong);border-radius:10px;padding:1.2rem;text-align:center;cursor:pointer;margin-bottom:1rem;background:var(--surface2)">
+            <i class="ti ti-file-spreadsheet" style="font-size:22px;color:var(--text-muted)"></i>
+            <p style="margin:.4rem 0 .2rem;font-size:13px;color:var(--text-muted)">Arraste o .xlsx aqui ou clique para selecionar</p>
+            <p style="font-size:11px;color:var(--text-hint)">Colunas esperadas: Fornecedor, Material, Qtd programada (kg), Qtd recebida (kg), Data prevista, Data chegada</p>
+            <input type="file" id="carga-file-input" accept=".xlsx,.xls" style="display:none" onchange="handleCargaFile(this.files[0])"/>
+          </div>
+          <div id="carga-upload-ok"    style="display:none;background:#d1fae5;border:.5px solid #6ee7b7;border-radius:8px;padding:.6rem 1rem;font-size:13px;color:#065f46;margin-bottom:.75rem"></div>
+          <div id="carga-upload-error" style="display:none;background:#fee2e2;border:.5px solid #fca5a5;border-radius:8px;padding:.6rem 1rem;font-size:13px;color:#991b1b;margin-bottom:.75rem"></div>
+
           <div id="cargas-lista"></div>
           <button onclick="addCargaRow()" style="font-family:inherit;font-size:13px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);padding:6px 14px;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:6px;margin-top:.5rem"><i class="ti ti-plus" style="font-size:14px"></i> Adicionar carga</button>
         </div>
@@ -2094,6 +2107,90 @@ function loadSheetJS(cb){
   s.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
   s.onload=cb;
   document.head.appendChild(s);
+}
+
+
+function handleCargaFile(file){
+  if(!file) return;
+  document.getElementById('carga-upload-ok').style.display='none';
+  document.getElementById('carga-upload-error').style.display='none';
+  if(!file.name.match(/\.xlsx?$/i)){
+    document.getElementById('carga-upload-error').textContent='Formato inválido. Use .xlsx ou .xls.';
+    document.getElementById('carga-upload-error').style.display='block';
+    return;
+  }
+  loadSheetJS(function(){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        var wb=XLSX.read(e.target.result,{type:'array'});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        parseCargaXlsxRows(rows);
+      } catch(err){
+        document.getElementById('carga-upload-error').textContent='Erro ao ler arquivo: '+err.message;
+        document.getElementById('carga-upload-error').style.display='block';
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function parseCargaXlsxRows(rows){
+  // Find header row with Fornecedor / Material / Qtd programada / Qtd recebida / Data prevista / Data chegada
+  var hRow=-1, cForn=-1, cMat=-1, cProg=-1, cRec=-1, cPrev=-1, cReal=-1;
+  for(var r=0;r<Math.min(rows.length,10);r++){
+    for(var c=0;c<rows[r].length;c++){
+      var cell=String(rows[r][c]).toLowerCase();
+      if(cell.includes('fornecedor'))  { cForn=c; hRow=r; }
+      if(cell.includes('material'))      cMat=c;
+      if(cell.includes('programada'))    cProg=c;
+      if(cell.includes('recebida'))      cRec=c;
+      if(cell.includes('prevista'))      cPrev=c;
+      if(cell.includes('chegada')||cell.includes('real')) cReal=c;
+    }
+    if(hRow===r&&cForn>=0&&cMat>=0) break;
+  }
+  if(hRow<0||cForn<0||cMat<0){
+    document.getElementById('carga-upload-error').textContent='Não foi possível identificar as colunas. Esperado: Fornecedor, Material, Qtd programada (kg), Qtd recebida (kg), Data prevista, Data chegada.';
+    document.getElementById('carga-upload-error').style.display='block';
+    return;
+  }
+  // Clear existing rows
+  document.getElementById('cargas-lista').innerHTML='';
+  _cargaCount=0;
+  var count=0;
+  function fmtDate(v){
+    if(!v) return '';
+    if(typeof v==='number'){
+      // Excel serial date
+      var d=new Date(Math.round((v-25569)*86400*1000));
+      return d.toISOString().slice(0,10);
+    }
+    if(typeof v==='string'&&v.trim()) return v.trim();
+    if(v instanceof Date) return v.toISOString().slice(0,10);
+    return '';
+  }
+  for(var r2=hRow+1;r2<rows.length;r2++){
+    var forn=String(rows[r2][cForn]||'').trim();
+    var mat =String(rows[r2][cMat] ||'').trim();
+    if(!forn&&!mat) continue;
+    var prog=parseFloat(rows[r2][cProg])||0;
+    var rec =parseFloat(rows[r2][cRec]) ||0;
+    var prev=fmtDate(rows[r2][cPrev]);
+    var real=fmtDate(rows[r2][cReal]);
+    // Normalize material name
+    var matNorm=normMat(mat);
+    addCargaRow({fornecedor:forn,material:matNorm,gramatura:'',largura:'',prog_kg:prog,rec_kg:rec,prev:prev,real:real,atraso:0});
+    count++;
+  }
+  if(count===0){
+    document.getElementById('carga-upload-error').textContent='Nenhuma carga encontrada no arquivo.';
+    document.getElementById('carga-upload-error').style.display='block';
+    return;
+  }
+  document.getElementById('carga-upload-ok').textContent=count+' cargas carregadas com sucesso. Revise abaixo e clique em Salvar.';
+  document.getElementById('carga-upload-ok').style.display='block';
 }
 
 function handleFile(file){
