@@ -4104,18 +4104,20 @@ function buildExpandRow(rowId, items, parentColspan, color, unitLabel){
 // ABA RUPTURA
 // ══════════════════════════════════════════════════════════
 function renderRuptura(){
-  if(!document.getElementById('rup-table-area')) return;
+  var tableEl  = document.getElementById('rup-table-area');
+  var motivoEl = document.getElementById('rup-motivo-area');
+  if(!tableEl) return;
 
-  // Show loading state
-  document.getElementById('rup-table-area').innerHTML='<p style="text-align:center;color:var(--text-muted);padding:2rem;font-size:13px"><i class="ti ti-loader"></i> Carregando...</p>';
-  document.getElementById('rup-motivo-area').innerHTML='<p style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:13px"><i class="ti ti-loader"></i> Carregando...</p>';
+  tableEl.innerHTML  = '<p style="text-align:center;color:var(--text-muted);padding:2rem;font-size:13px">Carregando...</p>';
+  motivoEl.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:13px">Carregando...</p>';
 
   var ano = parseInt(document.getElementById('rup-ano').value)||0;
-  var mes = parseInt(document.getElementById('rup-mes').value);
+  var mes = parseInt(document.getElementById('rup-mes').value); // -1 = todos
 
+  // Filter registros
   var recs = (_cxRegistros||[]).filter(function(r){
     var d = parseRecDate(r);
-    if(!d || isNaN(d)) return false;
+    if(!d||isNaN(d)) return false;
     if(ano && d.getFullYear()!==ano) return false;
     if(mes>=0 && d.getMonth()!==mes) return false;
     return true;
@@ -4127,9 +4129,10 @@ function renderRuptura(){
     var fat=0, kg=0;
     [2025,2026].forEach(function(a){
       if(!DB[a]) return;
-      DB[a].forEach(function(row){
+      DB[a].forEach(function(row,idx){
         if(!row||!row[mi]) return;
         if(ano && a!==ano) return;
+        if(mes>=0 && idx!==mes) return;
         fat += row[mi].fat||0;
         kg  += row[mi].kg||0;
       });
@@ -4137,7 +4140,23 @@ function renderRuptura(){
     avgPreco[m] = kg>0 ? fat/kg : 0;
   });
 
-  // Group by material
+  // Vendas kg por material
+  var vendasKg = {};
+  MAT.forEach(function(m,mi){
+    var kg=0;
+    [2025,2026].forEach(function(a){
+      if(!DB[a]) return;
+      DB[a].forEach(function(row,idx){
+        if(!row||!row[mi]) return;
+        if(ano && a!==ano) return;
+        if(mes>=0 && idx!==mes) return;
+        kg += row[mi].kg||0;
+      });
+    });
+    vendasKg[m] = kg;
+  });
+
+  // Group pedidos perdidos by material
   var byMat = {};
   var totalKgPerdido = 0;
   recs.forEach(function(r){
@@ -4150,114 +4169,79 @@ function renderRuptura(){
     totalKgPerdido += parseFloat(r.quantidade)||0;
   });
 
-  // Vendas kg por material
-  var vendasKg = {};
-  MAT.forEach(function(m,mi){
-    var kg=0;
-    [2025,2026].forEach(function(a){
-      if(!DB[a]) return;
-      DB[a].forEach(function(row){
-        if(!row||!row[mi]) return;
-        if(ano && a!==ano) return;
-        if(mes>=0){
-          var idx = DB[a].indexOf(row);
-          if(idx!==mes) return;
-        }
-        kg += row[mi].kg||0;
-      });
-    });
-    vendasKg[m] = kg;
-  });
-
   // Build rows
   var rows = MAT.map(function(m){
     var p = byMat[m]||{perdidos:0,kgPerdido:0,motivos:{}};
     var vKg = vendasKg[m]||0;
     var totalDem = vKg + p.kgPerdido;
     var ruptura = totalDem>0 ? (p.kgPerdido/totalDem)*100 : 0;
-    var fatPerdido = p.kgPerdido * (avgPreco[m]||0);
-    return {mat:m, perdidos:p.perdidos, kgPerdido:p.kgPerdido, ruptura:ruptura, fatPerdido:fatPerdido, motivos:p.motivos};
+    var fatPerdido = p.kgPerdido*(avgPreco[m]||0);
+    return {mat:m,perdidos:p.perdidos,kgPerdido:p.kgPerdido,ruptura:ruptura,fatPerdido:fatPerdido,motivos:p.motivos};
   }).sort(function(a,b){return b.ruptura-a.ruptura;});
 
-  var totalFat     = rows.reduce(function(s,r){return s+r.fatPerdido;},0);
-  var totalPerd    = rows.reduce(function(s,r){return s+r.perdidos;},0);
-  var totalVKg     = Object.values(vendasKg).reduce(function(s,v){return s+v;},0);
-  var ruptGeral    = (totalVKg+totalKgPerdido)>0 ? totalKgPerdido/(totalVKg+totalKgPerdido)*100 : 0;
-  var skusRuptura  = rows.filter(function(r){return r.ruptura>0;}).length;
+  var totalFat    = rows.reduce(function(s,r){return s+r.fatPerdido;},0);
+  var totalPerd   = rows.reduce(function(s,r){return s+r.perdidos;},0);
+  var totalVKg    = MAT.reduce(function(s,m){return s+(vendasKg[m]||0);},0);
+  var ruptGeral   = (totalVKg+totalKgPerdido)>0?totalKgPerdido/(totalVKg+totalKgPerdido)*100:0;
+  var skusRup     = rows.filter(function(r){return r.ruptura>0;}).length;
 
   // KPIs
-  function setEl(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; }
-  setEl('rup-kpi-pct',  ruptGeral.toFixed(1)+'%');
+  function setEl(id,v,col){var e=document.getElementById(id);if(e){e.textContent=v;if(col)e.style.color=col;}}
+  var cor = ruptGeral>=5?'#E24B4A':ruptGeral>=2?'#D97706':'#1D9E75';
+  setEl('rup-kpi-pct',  ruptGeral.toFixed(1)+'%', cor);
   setEl('rup-kpi-kg',   kgf(totalKgPerdido));
-  setEl('rup-kpi-skus', skusRuptura);
-  setEl('rup-kpi-fat',  brl(totalFat));
-
-  var ruptColor = ruptGeral>=5?'var(--red-text,#E24B4A)':ruptGeral>=2?'#D97706':'var(--green-text,#1D9E75)';
-  var el=document.getElementById('rup-kpi-pct'); if(el) el.style.color=ruptColor;
+  setEl('rup-kpi-skus', skusRup);
+  setEl('rup-kpi-fat',  brl(totalFat), totalFat>0?'#E24B4A':'#1D9E75');
 
   // Table
   if(totalPerd===0){
-    document.getElementById('rup-table-area').innerHTML=
-      '<p style="text-align:center;color:var(--text-muted);padding:2rem;font-size:13px">Nenhum pedido perdido registrado no período.</p>';
+    tableEl.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:2rem;font-size:13px">Nenhum pedido perdido registrado no período.</p>';
   } else {
-    var thtml='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
-      '<thead><tr style="border-bottom:.5px solid var(--border-strong)">'+
-      '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Produto</th>'+
-      '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Pedidos perdidos</th>'+
-      '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Volume perdido</th>'+
-      '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Índice de Ruptura</th>'+
-      '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Receita est. perdida</th>'+
-      '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase">Principal motivo</th>'+
+    var th = function(t){return '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;border-bottom:.5px solid var(--border-strong)">'+t+'</th>';};
+    var thtml='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>'+
+      th('Produto')+th('Pedidos perdidos')+th('Volume perdido')+th('Índice de Ruptura')+th('Receita est. perdida')+th('Principal motivo')+
       '</tr></thead><tbody>';
     rows.forEach(function(r){
       if(r.perdidos===0) return;
-      var cor = r.ruptura>=10?'#E24B4A':r.ruptura>=3?'#D97706':'#1D9E75';
-      var bgBadge = r.ruptura>=10?'#fee2e2':r.ruptura>=3?'#fef3c7':'#d1fae5';
-      var txBadge = r.ruptura>=10?'#991b1b':r.ruptura>=3?'#92400e':'#065f46';
-      var mainMot = Object.entries(r.motivos).sort(function(a,b){return b[1]-a[1];})[0];
+      var c  = r.ruptura>=10?'#E24B4A':r.ruptura>=3?'#D97706':'#1D9E75';
+      var bg = r.ruptura>=10?'#fee2e2':r.ruptura>=3?'#fef3c7':'#d1fae5';
+      var tx = r.ruptura>=10?'#991b1b':r.ruptura>=3?'#92400e':'#065f46';
+      var mm = Object.entries(r.motivos).sort(function(a,b){return b[1]-a[1];})[0];
       thtml+='<tr style="border-bottom:.5px solid var(--border)">'+
         '<td style="padding:.6rem .75rem;font-weight:500">'+r.mat+'</td>'+
-        '<td style="padding:.6rem .75rem">'+r.perdidos+' pedido(s)</td>'+
+        '<td style="padding:.6rem .75rem">'+r.perdidos+'</td>'+
         '<td style="padding:.6rem .75rem">'+kgf(r.kgPerdido)+'</td>'+
         '<td style="padding:.6rem .75rem">'+
           '<div style="display:flex;align-items:center;gap:.5rem">'+
-          '<div style="background:var(--surface2);border-radius:4px;height:8px;width:80px;flex-shrink:0">'+
-            '<div style="height:8px;border-radius:4px;width:'+Math.min(r.ruptura,100)+'%;background:'+cor+'"></div>'+
-          '</div>'+
-          '<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:'+bgBadge+';color:'+txBadge+'">'+r.ruptura.toFixed(1)+'%</span>'+
-          '</div>'+
-        '</td>'+
+          '<div style="background:var(--surface2);border-radius:4px;height:8px;width:80px">'+
+            '<div style="height:8px;border-radius:4px;width:'+Math.min(r.ruptura,100)+'%;background:'+c+'"></div></div>'+
+          '<span style="padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:'+bg+';color:'+tx+'">'+r.ruptura.toFixed(1)+'%</span>'+
+          '</div></td>'+
         '<td style="padding:.6rem .75rem;color:#E24B4A;font-weight:500">'+brl(r.fatPerdido)+'</td>'+
-        '<td style="padding:.6rem .75rem;color:var(--text-muted)">'+( mainMot?mainMot[0]:'—' )+'</td>'+
+        '<td style="padding:.6rem .75rem;color:var(--text-muted)">'+( mm?mm[0]:'—' )+'</td>'+
       '</tr>';
     });
     thtml+='</tbody></table>';
-    document.getElementById('rup-table-area').innerHTML=thtml;
+    tableEl.innerHTML=thtml;
   }
 
   // Motivos
-  var motivoCount={};
-  recs.forEach(function(r){
-    var m=(r.motivo||'Não informado').trim();
-    motivoCount[m]=(motivoCount[m]||0)+1;
-  });
-  var motSorted=Object.entries(motivoCount).sort(function(a,b){return b[1]-a[1];});
-  if(motSorted.length===0){
-    document.getElementById('rup-motivo-area').innerHTML=
-      '<p style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:13px">Sem dados no período.</p>';
+  var mc={};
+  recs.forEach(function(r){var m=(r.motivo||'Não informado').trim();mc[m]=(mc[m]||0)+1;});
+  var ms=Object.entries(mc).sort(function(a,b){return b[1]-a[1];});
+  if(ms.length===0){
+    motivoEl.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:13px">Sem dados no período.</p>';
   } else {
-    var maxM=motSorted[0][1];
-    var mhtml=motSorted.map(function(mv){
+    var maxM=ms[0][1];
+    motivoEl.innerHTML=ms.map(function(mv){
       var pct=(mv[1]/totalPerd*100).toFixed(1);
       return '<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.6rem;font-size:13px;padding:0 .25rem">'+
         '<div style="width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0">'+mv[0]+'</div>'+
         '<div style="background:var(--surface2);border-radius:4px;height:8px;flex:1">'+
-          '<div style="height:8px;border-radius:4px;width:'+(mv[1]/maxM*100)+'%;background:#E24B4A"></div>'+
-        '</div>'+
+          '<div style="height:8px;border-radius:4px;width:'+(mv[1]/maxM*100)+'%;background:#E24B4A"></div></div>'+
         '<div style="width:90px;text-align:right;flex-shrink:0">'+mv[1]+' ('+pct+'%)</div>'+
       '</div>';
     }).join('');
-    document.getElementById('rup-motivo-area').innerHTML=mhtml;
   }
 }
 
