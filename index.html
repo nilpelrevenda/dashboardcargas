@@ -283,7 +283,13 @@ html.light-mode {
   <button class="tab-btn" onclick="switchTab('analises',this)"><i class="ti ti-chart-dots"></i> An&aacute;lises</button>
   <button class="tab-btn" onclick="switchTab('cruzamento',this);setTimeout(function(){if(_cxRegistros.length>0)renderCruzamento(_cxRegistros);},50)"><i class="ti ti-arrows-cross"></i> Cruzamento</button>
   <button class="tab-btn" onclick="switchTab('forecast',this)"><i class="ti ti-trending-up"></i> Forecast</button>
-  <button class="tab-btn" onclick="switchTab('ruptura',this);setTimeout(renderRuptura,50)"><i class="ti ti-alert-triangle"></i> Ruptura</button>
+  <button class="tab-btn" onclick="switchTab('ruptura',this);setTimeout(function(){
+    if(!_cxRegistros||_cxRegistros.length===0){
+      loadCruzamento().then(function(){ renderRuptura(); }).catch(function(){ renderRuptura(); });
+    } else {
+      renderRuptura();
+    }
+  },50)"><i class="ti ti-alert-triangle"></i> Ruptura</button>
 </div>
 
 <!-- ===================== ABA MENSAL ===================== -->
@@ -4099,6 +4105,10 @@ function buildExpandRow(rowId, items, parentColspan, color, unitLabel){
 // ══════════════════════════════════════════════════════════
 function renderRuptura(){
   if(!document.getElementById('rup-table-area')) return;
+
+  // Show loading state
+  document.getElementById('rup-table-area').innerHTML='<p style="text-align:center;color:var(--text-muted);padding:2rem;font-size:13px"><i class="ti ti-loader"></i> Carregando...</p>';
+  document.getElementById('rup-motivo-area').innerHTML='<p style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:13px"><i class="ti ti-loader"></i> Carregando...</p>';
 
   var ano = parseInt(document.getElementById('rup-ano').value)||0;
   var mes = parseInt(document.getElementById('rup-mes').value);
