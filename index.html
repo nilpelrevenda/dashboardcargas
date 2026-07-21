@@ -1480,11 +1480,21 @@ function switchTab(name,btn){
   },100);});
   if(name==="analises")    requestAnimationFrame(function(){setTimeout(function(){
     renderAnalises();
-    // Resize all charts after another frame to fix 0-width issue
     requestAnimationFrame(function(){
       [cAnMat,cAnPie,cAnTrend,cAnSaz,cAnMat26,cAnPie26,cAnTrend26,cAnSaz26].concat(Object.values(_acCharts)).forEach(function(c){try{if(c&&c.resize)c.resize();}catch(e){}});
     });
   },100);});
+  if(name==="ruptura"){
+    var rp=document.getElementById("tab-ruptura");
+    if(rp) rp.style.display="block";
+    setTimeout(function(){
+      if(!_cxRegistros||_cxRegistros.length===0){
+        loadCruzamento().then(function(){renderRuptura();}).catch(function(){renderRuptura();});
+      } else {
+        renderRuptura();
+      }
+    },100);
+  }
 }
 
 /* ============================================================ ABA MENSAL */
