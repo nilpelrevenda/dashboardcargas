@@ -4454,6 +4454,21 @@ async function saveFdDia(){
 // ══════════════════════════════════════════════════════════
 var _fdCharts = {};
 
+function fdToggleExpand(btn){
+  var tbodyId = btn.getAttribute('data-target');
+  var tbody = document.getElementById(tbodyId);
+  if(!tbody) return;
+  var expanded = tbody.style.display !== 'none';
+  if(expanded){
+    tbody.style.display = 'none';
+    btn.innerHTML = btn.innerHTML.replace('&#9650;','&#9660;').replace('Ver menos', btn.getAttribute('data-more')||'Ver mais');
+  } else {
+    btn.setAttribute('data-more', btn.textContent.trim());
+    tbody.style.display = '';
+    btn.innerHTML = '&#9650; Ver menos';
+  }
+}
+
 function renderFatDiario(){
   if(!document.getElementById('fd-chart-diario')) return;
 
@@ -4635,7 +4650,7 @@ function renderFatDiario(){
   if(baixos.length===0){
     el5.innerHTML='<p style="color:#1D9E75;font-size:13px;padding:.5rem">Nenhum dia com faturamento abaixo de 70% da média no período.</p>';
   } else {
-    var rows5 = baixos.map(function(d){
+    function makeRow5(d){
       var pct=(d.fat/media*100).toFixed(0);
       return '<tr style="border-bottom:.5px solid var(--border)">'+
         '<td style="padding:.5rem .75rem;font-weight:500">'+d.label+'</td>'+
@@ -4643,13 +4658,23 @@ function renderFatDiario(){
         '<td style="padding:.5rem .75rem;color:var(--text-muted)">'+brl(media)+' (média)</td>'+
         '<td style="padding:.5rem .75rem;color:#E24B4A;font-weight:600">'+pct+'% da média</td>'+
       '</tr>';
-    }).join('');
-    el5.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
-      '<thead><tr><th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;border-bottom:.5px solid var(--border-strong)">Dia</th>'+
-      '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;border-bottom:.5px solid var(--border-strong)">Faturamento</th>'+
-      '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;border-bottom:.5px solid var(--border-strong)">Referência</th>'+
-      '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;border-bottom:.5px solid var(--border-strong)">% da média</th>'+
-      '</tr></thead><tbody>'+rows5+'</tbody></table>';
+    }
+    var thead5='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+      '<thead><tr>'+
+      ['Dia','Faturamento','Referência','% da média'].map(function(h){
+        return '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;border-bottom:.5px solid var(--border-strong)">'+h+'</th>';
+      }).join('')+
+      '</tr></thead><tbody>';
+    var visible5 = baixos.slice(0,5).map(makeRow5).join('');
+    var hidden5  = baixos.length>5 ? baixos.slice(5).map(makeRow5).join('') : '';
+    var expandBtn5 = baixos.length>5
+      ? '<tr id="fd-expand-btn5-row"><td colspan="4" style="padding:.5rem .75rem">'+
+          '<button onclick="fdToggleExpand(this)" data-target="fd-hidden5" id="fd-expand-btn5" '+
+          'style="font-family:inherit;font-size:12px;background:none;border:none;color:#378ADD;cursor:pointer;padding:0">'+
+          '&#9660; Ver mais '+( baixos.length-5)+' dias</button></td></tr>' : '';
+    var hiddenRows5 = hidden5
+      ? '<tbody id="fd-hidden5" style="display:none">'+hidden5+'</tbody>' : '';
+    el5.innerHTML = thead5+visible5+expandBtn5+'</tbody></table>'+hiddenRows5;
   }
 
   // ── Analysis 6+7: Correlação cargas x faturamento ──
@@ -4714,6 +4739,7 @@ function renderFatDiario(){
   });
   tbl+='</tr></thead><tbody>';
 
+  var allCorrRows=[];
   corrRows.forEach(function(r){
     var MS3=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     var chegada = MS3[r.c.mes]+'/'+r.c.dia;
@@ -4723,7 +4749,7 @@ function renderFatDiario(){
     var diffStr = r.diff!==null
       ? '<span style="color:'+(r.diff>=0?'#1D9E75':'#E24B4A')+';font-weight:600">'+(r.diff>=0?'+':'')+brl(r.diff)+'</span>'
       : '—';
-    tbl+='<tr style="border-bottom:.5px solid var(--border)">'+
+    allCorrRows.push('<tr style="border-bottom:.5px solid var(--border)">'+
       '<td style="padding:.5rem .75rem;font-weight:500">'+r.c.fornecedor+'</td>'+
       '<td style="padding:.5rem .75rem">'+r.c.material+'</td>'+
       '<td style="padding:.5rem .75rem">'+chegada+'</td>'+
@@ -4731,9 +4757,18 @@ function renderFatDiario(){
       '<td style="padding:.5rem .75rem">'+(r.antes!==null?brl(r.antes):'—')+'</td>'+
       '<td style="padding:.5rem .75rem">'+(r.depois!==null?brl(r.depois):'—')+'</td>'+
       '<td style="padding:.5rem .75rem">'+diffStr+'</td>'+
-    '</tr>';
+    '</tr>');
   });
-  tbl+='</tbody></table>';
+  var visible6 = allCorrRows.slice(0,5).join('');
+  var hidden6  = allCorrRows.length>5 ? allCorrRows.slice(5).join('') : '';
+  var expandBtn6 = allCorrRows.length>5
+    ? '<tr><td colspan="7" style="padding:.5rem .75rem">'+
+        '<button onclick="fdToggleExpand(this)" data-target="fd-hidden6" id="fd-expand-btn6" '+
+        'style="font-family:inherit;font-size:12px;background:none;border:none;color:#378ADD;cursor:pointer;padding:0">'+
+        '&#9660; Ver mais '+(allCorrRows.length-5)+' cargas</button></td></tr>' : '';
+  var hiddenRows6 = hidden6
+    ? '<tbody id="fd-hidden6" style="display:none">'+hidden6+'</tbody>' : '';
+  tbl+=visible6+expandBtn6+'</tbody></table>'+hiddenRows6;
   el6.innerHTML=tbl;
 }
 
