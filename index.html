@@ -4510,10 +4510,12 @@ function renderFatDiario(){
 
   // ── Helper: destroy and recreate chart ─────────────
   function ch(id, config){
-    if(_fdCharts[id]){try{_fdCharts[id].destroy();}catch(e){}}
+    _fdCharts[id] = destroyChart(_fdCharts[id]);
     var canvas=document.getElementById(id);
     if(!canvas) return;
-    _fdCharts[id]=new Chart(canvas.getContext('2d'),config);
+    // Set height before creating chart
+    if(config._height) canvas.parentElement.style.height=config._height;
+    _fdCharts[id] = makeChart(canvas, config);
     return _fdCharts[id];
   }
 
