@@ -4672,9 +4672,9 @@ function renderFatDiario(){
           '<button onclick="fdToggleExpand(this)" data-target="fd-hidden5" id="fd-expand-btn5" '+
           'style="font-family:inherit;font-size:12px;background:none;border:none;color:#378ADD;cursor:pointer;padding:0">'+
           '&#9660; Ver mais '+( baixos.length-5)+' dias</button></td></tr>' : '';
-    var hiddenRows5 = hidden5
-      ? '<tbody id="fd-hidden5" style="display:none">'+hidden5+'</tbody>' : '';
-    el5.innerHTML = thead5+visible5+expandBtn5+'</tbody></table>'+hiddenRows5;
+    el5.innerHTML = thead5+visible5+expandBtn5+'</tbody>'+
+      (hidden5 ? '<tbody id="fd-hidden5" style="display:none">'+hidden5+'</tbody>' : '')+
+      '</table>';
   }
 
   // ── Analysis 6+7: Correlação cargas x faturamento ──
@@ -4766,9 +4766,9 @@ function renderFatDiario(){
         '<button onclick="fdToggleExpand(this)" data-target="fd-hidden6" id="fd-expand-btn6" '+
         'style="font-family:inherit;font-size:12px;background:none;border:none;color:#378ADD;cursor:pointer;padding:0">'+
         '&#9660; Ver mais '+(allCorrRows.length-5)+' cargas</button></td></tr>' : '';
-  var hiddenRows6 = hidden6
-    ? '<tbody id="fd-hidden6" style="display:none">'+hidden6+'</tbody>' : '';
-  tbl+=visible6+expandBtn6+'</tbody></table>'+hiddenRows6;
+  tbl+=visible6+expandBtn6+'</tbody>'+
+    (hidden6 ? '<tbody id="fd-hidden6" style="display:none">'+hidden6+'</tbody>' : '')+
+    '</table>';
   el6.innerHTML=tbl;
 }
 
