@@ -283,13 +283,7 @@ html.light-mode {
   <button class="tab-btn" onclick="switchTab('analises',this)"><i class="ti ti-chart-dots"></i> An&aacute;lises</button>
   <button class="tab-btn" onclick="switchTab('cruzamento',this);setTimeout(function(){if(_cxRegistros.length>0)renderCruzamento(_cxRegistros);},50)"><i class="ti ti-arrows-cross"></i> Cruzamento</button>
   <button class="tab-btn" onclick="switchTab('forecast',this)"><i class="ti ti-trending-up"></i> Forecast</button>
-  <button class="tab-btn" onclick="switchTab('ruptura',this);setTimeout(function(){
-    if(!_cxRegistros||_cxRegistros.length===0){
-      loadCruzamento().then(function(){ renderRuptura(); }).catch(function(){ renderRuptura(); });
-    } else {
-      renderRuptura();
-    }
-  },50)"><i class="ti ti-alert-triangle"></i> Ruptura</button>
+  <button class="tab-btn" onclick="switchTab('ruptura',this)"><i class="ti ti-alert-triangle"></i> Ruptura</button>
 </div>
 
 <!-- ===================== ABA MENSAL ===================== -->
@@ -1054,25 +1048,24 @@ html.light-mode {
   </div>
 
 </main>
+</div>
 
-<!-- ===================== ABA RUPTURA ===================== -->
+<!-- ===== ABA RUPTURA ===== -->
 <div id="tab-ruptura" class="tab-panel">
 <main>
-  <section class="section-label">Índice de Ruptura por Produto</section>
-  <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem">
-    Baseado nos pedidos perdidos registrados. Quanto da demanda não foi atendida por falta de estoque.
-  </p>
+  <div class="section-label">Índice de Ruptura por Produto</div>
+  <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem">Baseado nos pedidos perdidos registrados. Percentual da demanda não atendida por falta de estoque.</p>
 
-  <!-- Filters -->
   <div style="display:flex;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center">
-    <label style="font-size:12px;color:var(--text-muted)">Período:</label>
+    <label style="font-size:12px;color:var(--text-muted)">Ano:</label>
     <select id="rup-ano" onchange="renderRuptura()" style="font-family:inherit;font-size:13px;padding:5px 10px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);color:var(--text)">
-      <option value="0">Todos os anos</option>
+      <option value="0">Todos</option>
       <option value="2025">2025</option>
       <option value="2026" selected>2026</option>
     </select>
+    <label style="font-size:12px;color:var(--text-muted)">Mês:</label>
     <select id="rup-mes" onchange="renderRuptura()" style="font-family:inherit;font-size:13px;padding:5px 10px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);color:var(--text)">
-      <option value="-1">Todos os meses</option>
+      <option value="-1">Todos</option>
       <option value="0">Janeiro</option><option value="1">Fevereiro</option><option value="2">Março</option>
       <option value="3">Abril</option><option value="4">Maio</option><option value="5">Junho</option>
       <option value="6">Julho</option><option value="7">Agosto</option><option value="8">Setembro</option>
@@ -1080,14 +1073,13 @@ html.light-mode {
     </select>
   </div>
 
-  <!-- KPIs -->
   <div class="metrics-grid" style="margin-bottom:1.25rem">
-    <div class="metric-card" style="border-left:3px solid var(--red-text,#E24B4A)">
+    <div class="metric-card" style="border-left:3px solid #E24B4A">
       <div class="metric-label">Índice de Ruptura Geral</div>
-      <div class="metric-value" id="rup-kpi-pct" style="color:var(--red-text,#E24B4A)">—</div>
-      <div class="metric-sub">pedidos perdidos / demanda total</div>
+      <div class="metric-value" id="rup-kpi-pct">—</div>
+      <div class="metric-sub">kg perdido / demanda total</div>
     </div>
-    <div class="metric-card" style="border-left:3px solid var(--red-text,#E24B4A)">
+    <div class="metric-card">
       <div class="metric-label">Volume Perdido</div>
       <div class="metric-value" id="rup-kpi-kg">—</div>
       <div class="metric-sub">kg não atendidos</div>
@@ -1095,37 +1087,25 @@ html.light-mode {
     <div class="metric-card" style="border-left:3px solid #D97706">
       <div class="metric-label">Produtos com Ruptura</div>
       <div class="metric-value" id="rup-kpi-skus">—</div>
-      <div class="metric-sub">de <span id="rup-kpi-skus-total">5</span> produtos</div>
+      <div class="metric-sub">de 5 produtos</div>
     </div>
-    <div class="metric-card" style="border-left:3px solid var(--red-text,#E24B4A)">
+    <div class="metric-card" style="border-left:3px solid #E24B4A">
       <div class="metric-label">Receita Est. Perdida</div>
-      <div class="metric-value" id="rup-kpi-fat" style="color:var(--red-text,#E24B4A)">—</div>
+      <div class="metric-value" id="rup-kpi-fat">—</div>
       <div class="metric-sub">pelo preço médio do período</div>
     </div>
   </div>
 
-  <!-- Table -->
   <div class="card" style="margin-bottom:1rem">
-    <div class="card-toggle-header">
-      <h2><i class="ti ti-table"></i> Ruptura por produto</h2>
-    </div>
-    <div id="rup-table-area" style="padding:.5rem 0">
-      <p style="text-align:center;color:var(--text-muted);padding:2rem;font-size:13px">Carregando...</p>
-    </div>
+    <div class="card-toggle-header"><h2><i class="ti ti-table"></i> Ruptura por produto</h2></div>
+    <div id="rup-table-area" style="padding:.5rem 0"></div>
   </div>
 
-  <!-- Motivos -->
   <div class="card">
-    <div class="card-toggle-header">
-      <h2><i class="ti ti-chart-bar"></i> Pedidos perdidos por motivo</h2>
-    </div>
-    <div id="rup-motivo-area" style="padding:.75rem 0">
-      <p style="text-align:center;color:var(--text-muted);padding:2rem;font-size:13px">Carregando...</p>
-    </div>
+    <div class="card-toggle-header"><h2><i class="ti ti-chart-bar"></i> Pedidos perdidos por motivo</h2></div>
+    <div id="rup-motivo-area" style="padding:.75rem 0"></div>
   </div>
-
 </main>
-</div>
 </div>
 
 <!-- ===== MODAL DADOS ===== -->
@@ -1480,21 +1460,16 @@ function switchTab(name,btn){
   },100);});
   if(name==="analises")    requestAnimationFrame(function(){setTimeout(function(){
     renderAnalises();
+    // Resize all charts after another frame to fix 0-width issue
     requestAnimationFrame(function(){
       [cAnMat,cAnPie,cAnTrend,cAnSaz,cAnMat26,cAnPie26,cAnTrend26,cAnSaz26].concat(Object.values(_acCharts)).forEach(function(c){try{if(c&&c.resize)c.resize();}catch(e){}});
     });
   },100);});
-  if(name==="ruptura"){
-    var rp=document.getElementById("tab-ruptura");
-    if(rp) rp.style.display="block";
-    setTimeout(function(){
-      if(!_cxRegistros||_cxRegistros.length===0){
-        loadCruzamento().then(function(){renderRuptura();}).catch(function(){renderRuptura();});
-      } else {
-        renderRuptura();
-      }
-    },100);
-  }
+  if(name==="ruptura") setTimeout(function(){
+    if(!_cxRegistros||_cxRegistros.length===0){
+      loadCruzamento().then(renderRuptura).catch(renderRuptura);
+    } else { renderRuptura(); }
+  },100);
 }
 
 /* ============================================================ ABA MENSAL */
@@ -4110,21 +4085,16 @@ function buildExpandRow(rowId, items, parentColspan, color, unitLabel){
   return {btn:btn, row:row};
 }
 
-// ══════════════════════════════════════════════════════════
-// ABA RUPTURA
-// ══════════════════════════════════════════════════════════
 function renderRuptura(){
   var tableEl  = document.getElementById('rup-table-area');
   var motivoEl = document.getElementById('rup-motivo-area');
   if(!tableEl) return;
-
-  tableEl.innerHTML  = '<p style="text-align:center;color:var(--text-muted);padding:2rem;font-size:13px">Carregando...</p>';
-  motivoEl.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:13px">Carregando...</p>';
+  tableEl.innerHTML  = '<p style="padding:2rem;text-align:center;color:var(--text-muted);font-size:13px">Carregando...</p>';
+  motivoEl.innerHTML = '';
 
   var ano = parseInt(document.getElementById('rup-ano').value)||0;
-  var mes = parseInt(document.getElementById('rup-mes').value); // -1 = todos
+  var mes = parseInt(document.getElementById('rup-mes').value);
 
-  // Filter registros
   var recs = (_cxRegistros||[]).filter(function(r){
     var d = parseRecDate(r);
     if(!d||isNaN(d)) return false;
@@ -4133,122 +4103,113 @@ function renderRuptura(){
     return true;
   });
 
-  // Avg price per material from DB
+  // avg price per material
   var avgPreco = {};
   MAT.forEach(function(m,mi){
-    var fat=0, kg=0;
+    var fat=0,kg=0;
     [2025,2026].forEach(function(a){
       if(!DB[a]) return;
-      DB[a].forEach(function(row,idx){
+      DB[a].forEach(function(row,i){
         if(!row||!row[mi]) return;
         if(ano && a!==ano) return;
-        if(mes>=0 && idx!==mes) return;
-        fat += row[mi].fat||0;
-        kg  += row[mi].kg||0;
+        if(mes>=0 && i!==mes) return;
+        fat+=row[mi].fat||0; kg+=row[mi].kg||0;
       });
     });
-    avgPreco[m] = kg>0 ? fat/kg : 0;
+    avgPreco[m]=kg>0?fat/kg:0;
   });
 
-  // Vendas kg por material
-  var vendasKg = {};
+  // vendas kg
+  var vendasKg={};
   MAT.forEach(function(m,mi){
     var kg=0;
     [2025,2026].forEach(function(a){
       if(!DB[a]) return;
-      DB[a].forEach(function(row,idx){
+      DB[a].forEach(function(row,i){
         if(!row||!row[mi]) return;
         if(ano && a!==ano) return;
-        if(mes>=0 && idx!==mes) return;
-        kg += row[mi].kg||0;
+        if(mes>=0 && i!==mes) return;
+        kg+=row[mi].kg||0;
       });
     });
-    vendasKg[m] = kg;
+    vendasKg[m]=kg;
   });
 
-  // Group pedidos perdidos by material
-  var byMat = {};
-  var totalKgPerdido = 0;
+  // group perdidos
+  var byMat={}, totalKgPerdido=0;
   recs.forEach(function(r){
-    var mat = normMatVendas(r.material||'');
+    var mat=normMatVendas(r.material||'');
     if(!byMat[mat]) byMat[mat]={perdidos:0,kgPerdido:0,motivos:{}};
     byMat[mat].perdidos++;
-    byMat[mat].kgPerdido += parseFloat(r.quantidade)||0;
-    var mot = (r.motivo||'Não informado').trim();
-    byMat[mat].motivos[mot] = (byMat[mat].motivos[mot]||0)+1;
-    totalKgPerdido += parseFloat(r.quantidade)||0;
+    byMat[mat].kgPerdido+=parseFloat(r.quantidade)||0;
+    var mot=(r.motivo||'Não informado').trim();
+    byMat[mat].motivos[mot]=(byMat[mat].motivos[mot]||0)+1;
+    totalKgPerdido+=parseFloat(r.quantidade)||0;
   });
 
-  // Build rows
-  var rows = MAT.map(function(m){
-    var p = byMat[m]||{perdidos:0,kgPerdido:0,motivos:{}};
-    var vKg = vendasKg[m]||0;
-    var totalDem = vKg + p.kgPerdido;
-    var ruptura = totalDem>0 ? (p.kgPerdido/totalDem)*100 : 0;
-    var fatPerdido = p.kgPerdido*(avgPreco[m]||0);
-    return {mat:m,perdidos:p.perdidos,kgPerdido:p.kgPerdido,ruptura:ruptura,fatPerdido:fatPerdido,motivos:p.motivos};
+  var rows=MAT.map(function(m){
+    var p=byMat[m]||{perdidos:0,kgPerdido:0,motivos:{}};
+    var vKg=vendasKg[m]||0;
+    var dem=vKg+p.kgPerdido;
+    var rup=dem>0?p.kgPerdido/dem*100:0;
+    return {mat:m,perdidos:p.perdidos,kgPerdido:p.kgPerdido,ruptura:rup,fatPerdido:p.kgPerdido*(avgPreco[m]||0),motivos:p.motivos};
   }).sort(function(a,b){return b.ruptura-a.ruptura;});
 
-  var totalFat    = rows.reduce(function(s,r){return s+r.fatPerdido;},0);
-  var totalPerd   = rows.reduce(function(s,r){return s+r.perdidos;},0);
-  var totalVKg    = MAT.reduce(function(s,m){return s+(vendasKg[m]||0);},0);
-  var ruptGeral   = (totalVKg+totalKgPerdido)>0?totalKgPerdido/(totalVKg+totalKgPerdido)*100:0;
-  var skusRup     = rows.filter(function(r){return r.ruptura>0;}).length;
+  var totalFat=rows.reduce(function(s,r){return s+r.fatPerdido;},0);
+  var totalPerd=rows.reduce(function(s,r){return s+r.perdidos;},0);
+  var totalVKg=MAT.reduce(function(s,m){return s+(vendasKg[m]||0);},0);
+  var ruptGeral=(totalVKg+totalKgPerdido)>0?totalKgPerdido/(totalVKg+totalKgPerdido)*100:0;
+  var skusRup=rows.filter(function(r){return r.ruptura>0;}).length;
 
-  // KPIs
   function setEl(id,v,col){var e=document.getElementById(id);if(e){e.textContent=v;if(col)e.style.color=col;}}
-  var cor = ruptGeral>=5?'#E24B4A':ruptGeral>=2?'#D97706':'#1D9E75';
-  setEl('rup-kpi-pct',  ruptGeral.toFixed(1)+'%', cor);
-  setEl('rup-kpi-kg',   kgf(totalKgPerdido));
-  setEl('rup-kpi-skus', skusRup);
-  setEl('rup-kpi-fat',  brl(totalFat), totalFat>0?'#E24B4A':'#1D9E75');
+  var cor=ruptGeral>=5?'#E24B4A':ruptGeral>=2?'#D97706':'#1D9E75';
+  setEl('rup-kpi-pct',ruptGeral.toFixed(1)+'%',cor);
+  setEl('rup-kpi-kg',kgf(totalKgPerdido));
+  setEl('rup-kpi-skus',skusRup);
+  setEl('rup-kpi-fat',brl(totalFat),totalFat>0?'#E24B4A':'#1D9E75');
 
-  // Table
   if(totalPerd===0){
-    tableEl.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:2rem;font-size:13px">Nenhum pedido perdido registrado no período.</p>';
+    tableEl.innerHTML='<p style="padding:2rem;text-align:center;color:var(--text-muted);font-size:13px">Nenhum pedido perdido registrado no período.</p>';
   } else {
-    var th = function(t){return '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;border-bottom:.5px solid var(--border-strong)">'+t+'</th>';};
-    var thtml='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>'+
-      th('Produto')+th('Pedidos perdidos')+th('Volume perdido')+th('Índice de Ruptura')+th('Receita est. perdida')+th('Principal motivo')+
-      '</tr></thead><tbody>';
+    var t='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>';
+    ['Produto','Pedidos perdidos','Volume perdido','Índice de Ruptura','Receita est. perdida','Principal motivo'].forEach(function(h){
+      t+='<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;border-bottom:.5px solid var(--border-strong)">'+h+'</th>';
+    });
+    t+='</tr></thead><tbody>';
     rows.forEach(function(r){
       if(r.perdidos===0) return;
-      var c  = r.ruptura>=10?'#E24B4A':r.ruptura>=3?'#D97706':'#1D9E75';
-      var bg = r.ruptura>=10?'#fee2e2':r.ruptura>=3?'#fef3c7':'#d1fae5';
-      var tx = r.ruptura>=10?'#991b1b':r.ruptura>=3?'#92400e':'#065f46';
-      var mm = Object.entries(r.motivos).sort(function(a,b){return b[1]-a[1];})[0];
-      thtml+='<tr style="border-bottom:.5px solid var(--border)">'+
+      var c=r.ruptura>=10?'#E24B4A':r.ruptura>=3?'#D97706':'#1D9E75';
+      var bg=r.ruptura>=10?'#fee2e2':r.ruptura>=3?'#fef3c7':'#d1fae5';
+      var tx=r.ruptura>=10?'#991b1b':r.ruptura>=3?'#92400e':'#065f46';
+      var mm=Object.entries(r.motivos).sort(function(a,b){return b[1]-a[1];})[0];
+      t+='<tr style="border-bottom:.5px solid var(--border)">'+
         '<td style="padding:.6rem .75rem;font-weight:500">'+r.mat+'</td>'+
         '<td style="padding:.6rem .75rem">'+r.perdidos+'</td>'+
         '<td style="padding:.6rem .75rem">'+kgf(r.kgPerdido)+'</td>'+
-        '<td style="padding:.6rem .75rem">'+
-          '<div style="display:flex;align-items:center;gap:.5rem">'+
-          '<div style="background:var(--surface2);border-radius:4px;height:8px;width:80px">'+
-            '<div style="height:8px;border-radius:4px;width:'+Math.min(r.ruptura,100)+'%;background:'+c+'"></div></div>'+
+        '<td style="padding:.6rem .75rem"><div style="display:flex;align-items:center;gap:.5rem">'+
+          '<div style="background:var(--surface2);border-radius:4px;height:8px;width:80px"><div style="height:8px;border-radius:4px;width:'+Math.min(r.ruptura,100)+'%;background:'+c+'"></div></div>'+
           '<span style="padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:'+bg+';color:'+tx+'">'+r.ruptura.toFixed(1)+'%</span>'+
-          '</div></td>'+
+        '</div></td>'+
         '<td style="padding:.6rem .75rem;color:#E24B4A;font-weight:500">'+brl(r.fatPerdido)+'</td>'+
-        '<td style="padding:.6rem .75rem;color:var(--text-muted)">'+( mm?mm[0]:'—' )+'</td>'+
+        '<td style="padding:.6rem .75rem;color:var(--text-muted)">'+(mm?mm[0]:'—')+'</td>'+
       '</tr>';
     });
-    thtml+='</tbody></table>';
-    tableEl.innerHTML=thtml;
+    t+='</tbody></table>';
+    tableEl.innerHTML=t;
   }
 
-  // Motivos
-  var mc={};
+  var mc={},ms;
   recs.forEach(function(r){var m=(r.motivo||'Não informado').trim();mc[m]=(mc[m]||0)+1;});
-  var ms=Object.entries(mc).sort(function(a,b){return b[1]-a[1];});
+  ms=Object.entries(mc).sort(function(a,b){return b[1]-a[1];});
   if(ms.length===0){
-    motivoEl.innerHTML='<p style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:13px">Sem dados no período.</p>';
+    motivoEl.innerHTML='<p style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:13px">Sem dados.</p>';
   } else {
     var maxM=ms[0][1];
     motivoEl.innerHTML=ms.map(function(mv){
       var pct=(mv[1]/totalPerd*100).toFixed(1);
-      return '<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.6rem;font-size:13px;padding:0 .25rem">'+
-        '<div style="width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0">'+mv[0]+'</div>'+
-        '<div style="background:var(--surface2);border-radius:4px;height:8px;flex:1">'+
-          '<div style="height:8px;border-radius:4px;width:'+(mv[1]/maxM*100)+'%;background:#E24B4A"></div></div>'+
+      return '<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.6rem;font-size:13px">'+
+        '<div style="width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0">'+mv[0]+'</div>'+
+        '<div style="background:var(--surface2);border-radius:4px;height:8px;flex:1"><div style="height:8px;border-radius:4px;width:'+(mv[1]/maxM*100)+'%;background:#E24B4A"></div></div>'+
         '<div style="width:90px;text-align:right;flex-shrink:0">'+mv[1]+' ('+pct+'%)</div>'+
       '</div>';
     }).join('');
