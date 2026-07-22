@@ -4362,7 +4362,7 @@ function renderRuptura(){
 // ── Fat Diário: load from Supabase ──────────────────────────
 async function loadFatDiario(){
   try{
-    var res = await fetch(SUPA_URL+'/rest/v1/fat_diario?select=*&order=ano.asc,mes.asc,dia.asc',{headers:getHeaders()});
+    var res = await fetch(SUPA_URL+'/rest/v1/fat_diario?select=*&order=ano.asc%2Cmes.asc%2Cdia.asc',{headers:getHeaders()});
     if(!res.ok) return;
     var rows = await res.json();
     // Merge into FAT_DIARIO constant (overwrite with Supabase data)
@@ -4528,6 +4528,7 @@ function renderFatDiario(){
   var avgLine= new Array(fatArr.length).fill(media);
 
   ch('fd-chart-diario',{
+    type:'bar',
     data:{labels:labels,datasets:[
       {type:'bar',label:'Faturamento diário',data:fatArr,
        backgroundColor:fatArr.map(function(v){return v>=media?'#378ADD55':'#E24B4A55';}),
@@ -4562,6 +4563,7 @@ function renderFatDiario(){
   var cum26 = cumSum(days26.map(function(d){return d.fat;}));
 
   ch('fd-chart-acum',{
+    type:'line',
     data:{labels:labels2,datasets:[
       {label:'2025',data:cum25,borderColor:C25,backgroundColor:'#378ADD11',fill:true,tension:0.3,pointRadius:0,borderWidth:2},
       {label:'2026',data:cum26,borderColor:C26,backgroundColor:'#E24B4A11',fill:true,tension:0.3,pointRadius:0,borderWidth:2}
@@ -4584,6 +4586,7 @@ function renderFatDiario(){
   var fat26 = days26.map(function(d){return d.fat;});
 
   ch('fd-chart-cmp',{
+    type:'line',
     data:{labels:lblCmp,datasets:[
       {type:'line',label:'2025',data:fat25,borderColor:C25,backgroundColor:'transparent',pointRadius:2,tension:0.3,borderWidth:1.5},
       {type:'line',label:'2026',data:fat26,borderColor:C26,backgroundColor:'transparent',pointRadius:2,tension:0.3,borderWidth:2}
@@ -4611,6 +4614,7 @@ function renderFatDiario(){
     }
   }
   ch('fd-chart-media',{
+    type:'bar',
     data:{labels:mLabels,datasets:[
       {type:'bar',label:'2025',data:med25,backgroundColor:C25+'99',borderColor:C25,borderWidth:1,borderRadius:3},
       {type:'bar',label:'2026',data:med26,backgroundColor:C26+'99',borderColor:C26,borderWidth:1,borderRadius:3}
