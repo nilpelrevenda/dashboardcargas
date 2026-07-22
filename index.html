@@ -284,6 +284,7 @@ html.light-mode {
   <button class="tab-btn" onclick="switchTab('cruzamento',this);setTimeout(function(){if(_cxRegistros.length>0)renderCruzamento(_cxRegistros);},50)"><i class="ti ti-arrows-cross"></i> Cruzamento</button>
   <button class="tab-btn" onclick="switchTab('forecast',this)"><i class="ti ti-trending-up"></i> Forecast</button>
   <button class="tab-btn" onclick="switchTab('ruptura',this)"><i class="ti ti-alert-triangle"></i> Ruptura</button>
+  <button class="tab-btn" onclick="switchTab('fatdiario',this)"><i class="ti ti-calendar-stats"></i> Fat. Diário</button>
 </div>
 
 <!-- ===================== ABA MENSAL ===================== -->
@@ -1108,6 +1109,125 @@ html.light-mode {
 </main>
 </div>
 
+<!-- ===== ABA FAT DIÁRIO ===== -->
+<div id="tab-fatdiario" class="tab-panel">
+<main>
+  <div class="section-label">Faturamento Diário</div>
+  <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem">Análise do faturamento dia a dia, comparativos e correlação com cargas.</p>
+
+  <!-- Filters -->
+  <div style="display:flex;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap;align-items:center">
+    <select id="fd-ano" onchange="renderFatDiario()" style="font-family:inherit;font-size:13px;padding:5px 10px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);color:var(--text)">
+      <option value="2025">2025</option>
+      <option value="2026" selected>2026</option>
+    </select>
+    <select id="fd-mes" onchange="renderFatDiario()" style="font-family:inherit;font-size:13px;padding:5px 10px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);color:var(--text)">
+      <option value="-1">Ano inteiro</option>
+      <option value="0">Janeiro</option><option value="1">Fevereiro</option><option value="2">Março</option>
+      <option value="3">Abril</option><option value="4">Maio</option><option value="5">Junho</option>
+      <option value="6">Julho</option><option value="7">Agosto</option><option value="8">Setembro</option>
+      <option value="9">Outubro</option><option value="10">Novembro</option><option value="11">Dezembro</option>
+    </select>
+    <button onclick="openFdModal()" style="margin-left:auto;font-family:inherit;font-size:13px;background:#378ADD;color:#fff;border:none;border-radius:var(--radius-md);padding:6px 14px;cursor:pointer;display:flex;align-items:center;gap:6px">
+      <i class="ti ti-plus"></i> Adicionar faturamento do dia
+    </button>
+  </div>
+
+  <!-- Modal Fat Diário -->
+  <div id="fd-modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1000;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border-radius:12px;padding:2rem;width:360px;box-shadow:0 8px 32px rgba(0,0,0,.18)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+        <h2 style="font-size:15px;font-weight:600"><i class="ti ti-calendar-plus"></i> Adicionar faturamento</h2>
+        <button onclick="closeFdModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-muted)">×</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.75rem">
+        <div>
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:.3rem">Data</label>
+          <input type="date" id="fd-input-data" style="width:100%;font-family:inherit;font-size:13px;padding:8px 10px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:8px;color:var(--text)"/>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:.3rem">Faturamento (R$)</label>
+          <input type="number" id="fd-input-fat" placeholder="Ex: 85000.00" step="0.01" min="0"
+            style="width:100%;font-family:inherit;font-size:13px;padding:8px 10px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:8px;color:var(--text)"/>
+        </div>
+        <div id="fd-modal-err" style="display:none;background:#fee2e2;border:.5px solid #fca5a5;border-radius:8px;padding:.5rem .75rem;font-size:12px;color:#991b1b"></div>
+        <div id="fd-modal-ok"  style="display:none;background:#d1fae5;border:.5px solid #6ee7b7;border-radius:8px;padding:.5rem .75rem;font-size:12px;color:#065f46"></div>
+        <div style="display:flex;gap:.5rem;margin-top:.25rem">
+          <button onclick="closeFdModal()" style="flex:1;font-family:inherit;font-size:13px;padding:9px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:8px;cursor:pointer;color:var(--text)">Cancelar</button>
+          <button onclick="saveFdDia()" id="fd-modal-save-btn" style="flex:2;font-family:inherit;font-size:13px;padding:9px;background:#378ADD;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:500">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="metrics-grid" style="margin-bottom:1.25rem">
+    <div class="metric-card">
+      <div class="metric-label">Faturamento Total</div>
+      <div class="metric-value" id="fd-kpi-total">—</div>
+      <div class="metric-sub" id="fd-kpi-total-sub">período selecionado</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Média Diária</div>
+      <div class="metric-value" id="fd-kpi-media">—</div>
+      <div class="metric-sub" id="fd-kpi-media-sub">por dia útil</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Melhor Dia</div>
+      <div class="metric-value" id="fd-kpi-melhor">—</div>
+      <div class="metric-sub" id="fd-kpi-melhor-sub">—</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">vs mesmo período 2025</div>
+      <div class="metric-value" id="fd-kpi-vs25">—</div>
+      <div class="metric-sub">comparativo ano anterior</div>
+    </div>
+  </div>
+
+  <!-- Chart 1: Faturamento diário + média móvel -->
+  <div class="card" style="margin-bottom:1rem">
+    <div class="card-toggle-header"><h2><i class="ti ti-chart-line"></i> Faturamento diário com média móvel (5 dias)</h2></div>
+    <div style="position:relative;height:280px"><canvas id="fd-chart-diario"></canvas></div>
+    <div id="fd-leg-diario" style="display:flex;gap:1rem;flex-wrap:wrap;padding:.5rem 0;font-size:12px"></div>
+  </div>
+
+  <!-- Chart 2: Acumulado no mês -->
+  <div class="card" style="margin-bottom:1rem">
+    <div class="card-toggle-header"><h2><i class="ti ti-trending-up"></i> Faturamento acumulado: 2025 vs 2026</h2></div>
+    <div style="position:relative;height:260px"><canvas id="fd-chart-acum"></canvas></div>
+    <div id="fd-leg-acum" style="display:flex;gap:1rem;flex-wrap:wrap;padding:.5rem 0;font-size:12px"></div>
+  </div>
+
+  <!-- Chart 3: Comparativo dia a dia 2025 vs 2026 -->
+  <div class="card" style="margin-bottom:1rem">
+    <div class="card-toggle-header"><h2><i class="ti ti-arrows-diff"></i> Comparativo dia a dia: 2025 vs 2026</h2></div>
+    <div style="position:relative;height:260px"><canvas id="fd-chart-cmp"></canvas></div>
+    <div id="fd-leg-cmp" style="display:flex;gap:1rem;flex-wrap:wrap;padding:.5rem 0;font-size:12px"></div>
+  </div>
+
+  <!-- Chart 4: Média diária por mês -->
+  <div class="card" style="margin-bottom:1rem">
+    <div class="card-toggle-header"><h2><i class="ti ti-chart-bar"></i> Média diária por mês (R$/dia útil)</h2></div>
+    <div style="position:relative;height:240px"><canvas id="fd-chart-media"></canvas></div>
+    <div id="fd-leg-media" style="display:flex;gap:1rem;flex-wrap:wrap;padding:.5rem 0;font-size:12px"></div>
+  </div>
+
+  <!-- Chart 5: Dias abaixo da média -->
+  <div class="card" style="margin-bottom:1rem">
+    <div class="card-toggle-header"><h2><i class="ti ti-alert-circle"></i> Dias abaixo da média do mês</h2></div>
+    <div id="fd-dias-baixos" style="padding:.5rem 0"></div>
+  </div>
+
+  <!-- Chart 6+7: Correlação cargas x faturamento -->
+  <div class="card">
+    <div class="card-toggle-header"><h2><i class="ti ti-truck"></i> Correlação: chegada de cargas × faturamento</h2></div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:.75rem">Faturamento médio nos 5 dias antes e 5 dias após chegada de cada carga.</p>
+    <div id="fd-correlacao" style="padding:.5rem 0"></div>
+  </div>
+
+</main>
+</div>
+
 <!-- ===== MODAL DADOS ===== -->
 <div id="modal-backdrop" class="modal-backdrop" style="display:none" onclick="backdropClick(event)">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -1308,6 +1428,31 @@ const KRAFT_SPLIT = {
     5: {kraft:50701, kraftMono:63833},
   },
 };
+const FAT_DIARIO = {
+  2025: {
+    0: [{d:2,f:2995.4},{d:3,f:60952.97},{d:6,f:169935.3},{d:7,f:71391.02},{d:8,f:65935.24},{d:9,f:29773.29},{d:10,f:20329.46},{d:13,f:159182.0},{d:14,f:71430.86},{d:15,f:102722.49},{d:16,f:81644.63},{d:17,f:91490.02},{d:20,f:121518.02},{d:21,f:83448.39},{d:22,f:147916.48},{d:23,f:98480.96},{d:24,f:29197.47},{d:27,f:119584.07},{d:28,f:111236.2},{d:29,f:63411.04},{d:30,f:243653.42},{d:31,f:125513.19}],
+    1: [{d:3,f:81087.36},{d:4,f:60894.1},{d:5,f:86957.94},{d:6,f:61798.07},{d:7,f:117471.99},{d:10,f:91324.52},{d:11,f:102955.27},{d:12,f:48309.44},{d:13,f:88919.77},{d:14,f:64717.71},{d:17,f:39578.49},{d:18,f:180906.23},{d:19,f:60151.25},{d:20,f:174769.2},{d:21,f:117954.19},{d:24,f:97757.5},{d:25,f:46437.23},{d:26,f:212695.01},{d:27,f:199687.33},{d:28,f:332544.22}],
+    2: [{d:5,f:24684.65},{d:6,f:71557.53},{d:7,f:76195.7},{d:10,f:68631.95},{d:11,f:113832.63},{d:12,f:118419.26},{d:13,f:96835.75},{d:14,f:99300.7},{d:17,f:79776.75},{d:18,f:107155.94},{d:19,f:23828.64},{d:20,f:24698.32},{d:21,f:139656.92},{d:24,f:16251.13},{d:25,f:104257.86},{d:26,f:215474.83},{d:27,f:191869.82},{d:28,f:198006.34},{d:31,f:105470.11}],
+    3: [{d:1,f:9274.85},{d:2,f:56488.29},{d:3,f:82776.17},{d:4,f:115190.43},{d:7,f:35326.45},{d:8,f:81028.25},{d:9,f:48134.92},{d:10,f:43260.29},{d:11,f:97547.25},{d:14,f:138907.71},{d:15,f:85958.94},{d:16,f:204621.06},{d:17,f:98829.03},{d:22,f:39482.35},{d:23,f:71759.74},{d:24,f:169384.34},{d:25,f:54926.47},{d:28,f:100955.95},{d:29,f:164576.17},{d:30,f:263710.14}],
+    4: [{d:2,f:2877.96},{d:5,f:63207.78},{d:6,f:72756.09},{d:7,f:157050.94},{d:8,f:9475.85},{d:9,f:161331.8},{d:12,f:17428.37},{d:13,f:35024.84},{d:14,f:227477.42},{d:15,f:34028.95},{d:16,f:83766.97},{d:19,f:111165.34},{d:20,f:119254.45},{d:21,f:104395.9},{d:22,f:133559.49},{d:23,f:91016.2},{d:26,f:80857.68},{d:27,f:108559.06},{d:28,f:33674.88},{d:29,f:195060.09},{d:30,f:189620.52}],
+    5: [{d:2,f:49558.08},{d:3,f:91672.8},{d:4,f:23584.23},{d:5,f:96125.87},{d:6,f:189916.64},{d:9,f:101331.47},{d:10,f:167586.18},{d:11,f:38104.47},{d:12,f:75325.65},{d:13,f:74470.62},{d:16,f:103040.98},{d:17,f:50925.48},{d:18,f:80892.88},{d:20,f:57328.85},{d:23,f:129250.04},{d:24,f:148775.51},{d:25,f:107029.91},{d:26,f:63864.85},{d:27,f:70431.1},{d:30,f:249580.41}],
+    6: [{d:1,f:36414.87},{d:2,f:62128.72},{d:3,f:77495.61},{d:4,f:172451.77},{d:7,f:47563.38},{d:8,f:81883.4},{d:10,f:75692.22},{d:11,f:56971.55},{d:14,f:65616.85},{d:15,f:38470.7},{d:16,f:156861.46},{d:17,f:81617.19},{d:18,f:73361.09},{d:21,f:47193.42},{d:22,f:107659.85},{d:23,f:78222.06},{d:24,f:106203.72},{d:25,f:297624.54},{d:28,f:108783.76},{d:29,f:107826.6},{d:30,f:56256.59},{d:31,f:109637.82}],
+    7: [{d:1,f:13443.3},{d:4,f:73537.46},{d:5,f:74323.02},{d:6,f:54843.36},{d:7,f:38531.63},{d:8,f:56467.31},{d:11,f:139047.62},{d:12,f:62879.6},{d:13,f:84916.75},{d:14,f:103599.42},{d:15,f:27279.0},{d:18,f:64648.93},{d:19,f:53502.78},{d:20,f:64604.71},{d:21,f:56208.25},{d:22,f:106313.52},{d:25,f:104960.72},{d:26,f:128505.05},{d:27,f:97303.33},{d:28,f:123954.96},{d:29,f:92600.57}],
+    8: [{d:1,f:82383.14},{d:2,f:49149.38},{d:3,f:153446.17},{d:4,f:88755.98},{d:5,f:135986.8},{d:8,f:114692.88},{d:9,f:56172.94},{d:10,f:68206.51},{d:11,f:115477.26},{d:12,f:57001.71},{d:15,f:123455.21},{d:16,f:48625.27},{d:17,f:61344.6},{d:18,f:92034.69},{d:19,f:52894.4},{d:22,f:77099.3},{d:23,f:57673.44},{d:24,f:93017.51},{d:25,f:53222.46},{d:26,f:29229.43},{d:29,f:76567.69},{d:30,f:266871.07}],
+    9: [{d:1,f:54089.01},{d:2,f:73994.42},{d:3,f:160506.6},{d:6,f:68544.24},{d:7,f:123952.93},{d:8,f:86142.76},{d:9,f:118102.76},{d:10,f:50501.44},{d:13,f:38063.9},{d:14,f:64673.34},{d:15,f:91743.48},{d:16,f:74975.54},{d:17,f:35403.06},{d:20,f:86782.76},{d:21,f:130698.02},{d:22,f:88135.04},{d:23,f:70461.7},{d:24,f:63783.23},{d:27,f:47645.29},{d:28,f:110526.44},{d:29,f:47910.78},{d:30,f:81780.6},{d:31,f:81143.29}],
+    10: [{d:3,f:79635.05},{d:4,f:62066.38},{d:5,f:123931.06},{d:6,f:115892.34},{d:7,f:149983.57},{d:10,f:59693.0},{d:11,f:169936.38},{d:12,f:91618.61},{d:13,f:193790.88},{d:14,f:61167.11},{d:17,f:88736.02},{d:18,f:68951.73},{d:19,f:135809.26},{d:21,f:127377.46},{d:24,f:64406.57},{d:25,f:74087.2},{d:26,f:98744.91},{d:27,f:103673.26},{d:28,f:359489.47}],
+    11: [{d:1,f:14740.89},{d:2,f:58646.34},{d:3,f:42603.3},{d:4,f:57104.49},{d:5,f:54302.4},{d:8,f:40426.06},{d:9,f:71937.48},{d:10,f:122315.15},{d:11,f:136111.83},{d:12,f:40792.95},{d:15,f:143868.72},{d:16,f:87110.43},{d:17,f:80815.3},{d:18,f:57887.13},{d:19,f:96951.13},{d:22,f:49955.23},{d:23,f:121002.28},{d:29,f:16360.16},{d:30,f:91051.88}],
+  },
+  2026: {
+    0: [{d:5,f:36635.71},{d:6,f:63575.53},{d:7,f:92750.38},{d:8,f:60197.5},{d:9,f:64936.71},{d:12,f:43041.29},{d:13,f:31315.44},{d:14,f:75007.24},{d:15,f:111698.99},{d:16,f:159589.47},{d:19,f:91728.77},{d:20,f:120500.48},{d:21,f:148905.49},{d:22,f:106834.61},{d:23,f:38742.74},{d:26,f:90277.36},{d:27,f:58345.43},{d:28,f:114101.08},{d:29,f:92584.84},{d:30,f:125390.24}],
+    1: [{d:2,f:64586.3},{d:3,f:51507.03},{d:4,f:61321.1},{d:5,f:53539.57},{d:6,f:59599.26},{d:9,f:44770.47},{d:10,f:58100.42},{d:11,f:70466.38},{d:12,f:39379.42},{d:13,f:50417.04},{d:18,f:129605.72},{d:19,f:82906.28},{d:20,f:74226.81},{d:23,f:159321.15},{d:24,f:101965.5},{d:25,f:108980.73},{d:26,f:72333.98},{d:27,f:262761.88}],
+    2: [{d:2,f:21746.8},{d:3,f:53694.68},{d:4,f:52265.83},{d:5,f:54768.23},{d:6,f:38241.49},{d:9,f:49233.37},{d:10,f:55032.91},{d:11,f:83317.04},{d:12,f:29259.4},{d:13,f:99981.98},{d:16,f:64645.5},{d:17,f:70009.8},{d:18,f:58708.42},{d:19,f:60078.85},{d:20,f:41447.07},{d:23,f:45572.83},{d:24,f:99410.01},{d:25,f:106717.46},{d:26,f:57482.06},{d:27,f:39413.85},{d:30,f:130681.55},{d:31,f:258041.86}],
+    3: [{d:1,f:26718.44},{d:2,f:75160.98},{d:6,f:84815.61},{d:7,f:70468.66},{d:8,f:65918.61},{d:9,f:67247.5},{d:10,f:64578.54},{d:13,f:72267.35},{d:14,f:89244.81},{d:15,f:56802.75},{d:16,f:28011.65},{d:17,f:40126.24},{d:20,f:52826.08},{d:22,f:35461.83},{d:23,f:105454.68},{d:24,f:68674.0},{d:27,f:51456.47},{d:28,f:154017.76},{d:29,f:144065.7},{d:30,f:245027.99}],
+    4: [{d:4,f:89181.27},{d:5,f:46181.28},{d:6,f:81592.68},{d:7,f:78367.37},{d:8,f:66372.78},{d:11,f:102230.76},{d:12,f:63286.67},{d:13,f:142050.96},{d:14,f:61897.84},{d:15,f:56966.76},{d:18,f:75083.58},{d:19,f:71237.41},{d:20,f:63319.78},{d:21,f:58022.77},{d:22,f:112081.19},{d:25,f:96050.5},{d:26,f:30892.55},{d:27,f:131067.41},{d:28,f:147518.06},{d:29,f:286500.62}],
+    5: [{d:1,f:58066.14},{d:2,f:94872.25},{d:3,f:29778.12},{d:5,f:45703.96},{d:8,f:24207.39},{d:9,f:33579.29},{d:10,f:122100.77},{d:11,f:42563.38},{d:12,f:75992.94},{d:15,f:31174.09},{d:16,f:57183.7},{d:17,f:68977.92},{d:18,f:78882.27},{d:19,f:42945.45},{d:22,f:80202.72},{d:23,f:134374.01},{d:24,f:40139.98},{d:25,f:32454.56},{d:26,f:54321.36},{d:29,f:48338.91}],
+    6: [{d:1,f:31800.19},{d:2,f:21658.4},{d:3,f:72636.88},{d:6,f:23295.75},{d:7,f:21556.15},{d:8,f:68006.1},{d:10,f:56163.2},{d:13,f:54702.6},{d:14,f:71092.02},{d:15,f:25542.7},{d:16,f:33306.84},{d:17,f:99714.34},{d:20,f:117550.82},{d:21,f:119692.42}],
+  },
+};
 const ML  = ["Janeiro","Fevereiro","Marco","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const MS  = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const C25 = "#378ADD", C26 = "#1D9E75";
@@ -1470,6 +1615,7 @@ function switchTab(name,btn){
       loadCruzamento().then(renderRuptura).catch(renderRuptura);
     } else { renderRuptura(); }
   },100);
+  if(name==="fatdiario") setTimeout(function(){loadFatDiario().then(renderFatDiario);},100);
 }
 
 /* ============================================================ ABA MENSAL */
@@ -4103,7 +4249,6 @@ function renderRuptura(){
     return true;
   });
 
-  // avg price per material
   var avgPreco = {};
   MAT.forEach(function(m,mi){
     var fat=0,kg=0;
@@ -4119,7 +4264,6 @@ function renderRuptura(){
     avgPreco[m]=kg>0?fat/kg:0;
   });
 
-  // vendas kg
   var vendasKg={};
   MAT.forEach(function(m,mi){
     var kg=0;
@@ -4135,7 +4279,6 @@ function renderRuptura(){
     vendasKg[m]=kg;
   });
 
-  // group perdidos
   var byMat={}, totalKgPerdido=0;
   recs.forEach(function(r){
     var mat=normMatVendas(r.material||'');
@@ -4198,9 +4341,9 @@ function renderRuptura(){
     tableEl.innerHTML=t;
   }
 
-  var mc={},ms;
+  var mc={};
   recs.forEach(function(r){var m=(r.motivo||'Não informado').trim();mc[m]=(mc[m]||0)+1;});
-  ms=Object.entries(mc).sort(function(a,b){return b[1]-a[1];});
+  var ms=Object.entries(mc).sort(function(a,b){return b[1]-a[1];});
   if(ms.length===0){
     motivoEl.innerHTML='<p style="padding:1.5rem;text-align:center;color:var(--text-muted);font-size:13px">Sem dados.</p>';
   } else {
@@ -4214,6 +4357,378 @@ function renderRuptura(){
       '</div>';
     }).join('');
   }
+}
+
+// ── Fat Diário: load from Supabase ──────────────────────────
+async function loadFatDiario(){
+  try{
+    var res = await fetch(SUPA_URL+'/rest/v1/fat_diario?select=*&order=ano.asc,mes.asc,dia.asc',{headers:getHeaders()});
+    if(!res.ok) return;
+    var rows = await res.json();
+    // Merge into FAT_DIARIO constant (overwrite with Supabase data)
+    rows.forEach(function(r){
+      if(!FAT_DIARIO[r.ano]) FAT_DIARIO[r.ano]={};
+      if(!FAT_DIARIO[r.ano][r.mes]) FAT_DIARIO[r.ano][r.mes]=[];
+      // Replace or add
+      var existing = FAT_DIARIO[r.ano][r.mes].findIndex(function(d){return d.d===r.dia;});
+      if(existing>=0) FAT_DIARIO[r.ano][r.mes][existing].f = parseFloat(r.fat);
+      else FAT_DIARIO[r.ano][r.mes].push({d:r.dia, f:parseFloat(r.fat)});
+    });
+    // Sort each month by day
+    Object.keys(FAT_DIARIO).forEach(function(a){
+      Object.keys(FAT_DIARIO[a]).forEach(function(m){
+        FAT_DIARIO[a][m].sort(function(a,b){return a.d-b.d;});
+      });
+    });
+  } catch(e){ console.warn('loadFatDiario error:', e); }
+}
+
+// ── Modal controls ───────────────────────────────────────────
+function openFdModal(){
+  // Default to today
+  var today = new Date();
+  var dd = String(today.getDate()).padStart(2,'0');
+  var mm = String(today.getMonth()+1).padStart(2,'0');
+  var yyyy = today.getFullYear();
+  document.getElementById('fd-input-data').value = yyyy+'-'+mm+'-'+dd;
+  document.getElementById('fd-input-fat').value = '';
+  document.getElementById('fd-modal-err').style.display='none';
+  document.getElementById('fd-modal-ok').style.display='none';
+  var bd = document.getElementById('fd-modal-backdrop');
+  bd.style.display='flex';
+}
+
+function closeFdModal(){
+  document.getElementById('fd-modal-backdrop').style.display='none';
+}
+
+async function saveFdDia(){
+  var dataVal = document.getElementById('fd-input-data').value;
+  var fatVal  = parseFloat(document.getElementById('fd-input-fat').value);
+  var errEl   = document.getElementById('fd-modal-err');
+  var okEl    = document.getElementById('fd-modal-ok');
+  var btn     = document.getElementById('fd-modal-save-btn');
+
+  errEl.style.display='none'; okEl.style.display='none';
+
+  if(!dataVal){ errEl.textContent='Informe a data.'; errEl.style.display='block'; return; }
+  if(isNaN(fatVal)||fatVal<0){ errEl.textContent='Informe um valor válido.'; errEl.style.display='block'; return; }
+
+  var dt  = new Date(dataVal+'T12:00:00');
+  var ano = dt.getFullYear();
+  var mes = dt.getMonth();   // 0-indexed
+  var dia = dt.getDate();
+
+  btn.textContent='Salvando...'; btn.disabled=true;
+
+  try{
+    var res = await fetch(SUPA_URL+'/rest/v1/fat_diario',{
+      method:'POST',
+      headers: Object.assign({},getHeaders(),{'Prefer':'resolution=merge-duplicates,return=minimal'}),
+      body: JSON.stringify({ano:ano, mes:mes, dia:dia, fat:fatVal})
+    });
+    if(!res.ok){
+      var err=await res.json();
+      throw new Error(err.message||'Erro ao salvar.');
+    }
+    // Update local FAT_DIARIO
+    if(!FAT_DIARIO[ano]) FAT_DIARIO[ano]={};
+    if(!FAT_DIARIO[ano][mes]) FAT_DIARIO[ano][mes]=[];
+    var idx2 = FAT_DIARIO[ano][mes].findIndex(function(d){return d.d===dia;});
+    if(idx2>=0) FAT_DIARIO[ano][mes][idx2].f=fatVal;
+    else FAT_DIARIO[ano][mes].push({d:dia,f:fatVal});
+    FAT_DIARIO[ano][mes].sort(function(a,b){return a.d-b.d;});
+
+    var MS4=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    okEl.textContent='Salvo! '+MS4[mes]+'/'+dia+' — '+brl(fatVal)+'. Atualizando gráficos...';
+    okEl.style.display='block';
+    setTimeout(function(){ closeFdModal(); renderFatDiario(); }, 1500);
+  } catch(e){
+    errEl.textContent=e.message; errEl.style.display='block';
+  }
+  btn.textContent='Salvar'; btn.disabled=false;
+}
+
+// ══════════════════════════════════════════════════════════
+// ABA FAT. DIÁRIO
+// ══════════════════════════════════════════════════════════
+var _fdCharts = {};
+
+function renderFatDiario(){
+  if(!document.getElementById('fd-chart-diario')) return;
+
+  var ano = parseInt(document.getElementById('fd-ano').value);
+  var mes = parseInt(document.getElementById('fd-mes').value); // -1 = ano inteiro
+  var MS2 = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  var MESES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  // Get days for selected period
+  function getDays(a, m){
+    if(!FAT_DIARIO[a]) return [];
+    if(m>=0) return (FAT_DIARIO[a][m]||[]).map(function(d){ return {label:MS2[m]+'/'+d.d, fat:d.f, dia:d.d, mes:m}; });
+    var all=[];
+    for(var i=0;i<12;i++){
+      (FAT_DIARIO[a][i]||[]).forEach(function(d){ all.push({label:MS2[i]+'/'+d.d, fat:d.f, dia:d.d, mes:i}); });
+    }
+    return all;
+  }
+
+  var days = getDays(ano, mes);
+  var days25 = getDays(2025, mes);
+  var days26 = getDays(2026, mes);
+
+  if(days.length===0){ return; }
+
+  // ── KPIs ──────────────────────────────────────────────
+  var total = days.reduce(function(s,d){return s+d.fat;},0);
+  var media = total/days.length;
+  var melhor = days.reduce(function(a,b){return b.fat>a.fat?b:a;});
+
+  // vs 2025 same period
+  var total25 = days25.reduce(function(s,d){return s+d.fat;},0);
+  var total26 = days26.reduce(function(s,d){return s+d.fat;},0);
+  var vs25pct = total25>0 ? (total/total25-1)*100 : null;
+
+  function setEl(id,v,col){var e=document.getElementById(id);if(e){e.textContent=v;if(col)e.style.color=col;}}
+  setEl('fd-kpi-total', brl(total));
+  setEl('fd-kpi-media', brl(media));
+  setEl('fd-kpi-melhor', brl(melhor.fat));
+  setEl('fd-kpi-melhor-sub', melhor.label);
+  if(vs25pct!==null){
+    setEl('fd-kpi-vs25', (vs25pct>=0?'+':'')+vs25pct.toFixed(1)+'%', vs25pct>=0?'#1D9E75':'#E24B4A');
+  } else {
+    setEl('fd-kpi-vs25','—');
+  }
+
+  // ── Helper: moving average ──────────────────────────
+  function movAvg(arr, n){
+    return arr.map(function(_,i){
+      var sl=arr.slice(Math.max(0,i-Math.floor(n/2)), i+Math.ceil(n/2));
+      return sl.reduce(function(s,v){return s+v;},0)/sl.length;
+    });
+  }
+
+  // ── Helper: destroy and recreate chart ─────────────
+  function ch(id, config){
+    if(_fdCharts[id]){try{_fdCharts[id].destroy();}catch(e){}}
+    var canvas=document.getElementById(id);
+    if(!canvas) return;
+    _fdCharts[id]=new Chart(canvas.getContext('2d'),config);
+    return _fdCharts[id];
+  }
+
+  var C25='#378ADD', C26='#E24B4A', CMM='#D97706';
+
+  // ── Chart 1: Daily + moving avg ────────────────────
+  var fatArr = days.map(function(d){return d.fat;});
+  var mmArr  = movAvg(fatArr, 5);
+  var labels = days.map(function(d){return d.label;});
+  var avgLine= new Array(fatArr.length).fill(media);
+
+  ch('fd-chart-diario',{
+    data:{labels:labels,datasets:[
+      {type:'bar',label:'Faturamento diário',data:fatArr,
+       backgroundColor:fatArr.map(function(v){return v>=media?'#378ADD55':'#E24B4A55';}),
+       borderColor:fatArr.map(function(v){return v>=media?C25:C26;}),
+       borderWidth:1,borderRadius:2,order:2},
+      {type:'line',label:'Média móvel 5d',data:mmArr,borderColor:CMM,backgroundColor:'transparent',
+       pointRadius:0,tension:0.4,borderWidth:2,order:1},
+      {type:'line',label:'Média do período',data:avgLine,borderColor:'#88888855',backgroundColor:'transparent',
+       pointRadius:0,borderDash:[4,4],borderWidth:1.5,order:3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,
+        callbacks:{label:function(c){return c.dataset.label+': '+brl(c.parsed.y);}}}},
+      scales:{x:{ticks:{color:'#888',font:{size:10},maxTicksLimit:24},grid:{display:false}},
+              y:{ticks:{color:'#888',font:{size:11},callback:function(v){return brl(v);}},
+                 grid:{color:'rgba(128,128,128,.1)'}}}}
+  });
+
+  // Legend
+  document.getElementById('fd-leg-diario').innerHTML=
+    '<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#378ADD55;border:1px solid #378ADD;border-radius:2px"></span>Acima da média</span>'+
+    '<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#E24B4A55;border:1px solid #E24B4A;border-radius:2px"></span>Abaixo da média</span>'+
+    '<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:3px;background:#D97706;display:inline-block"></span>Média móvel 5d</span>';
+
+  // ── Chart 2: Acumulado 2025 vs 2026 ────────────────
+  function cumSum(arr){ var s=0; return arr.map(function(v){return s+=v;}); }
+
+  // Use business day index for comparison
+  var maxDays = Math.max(days25.length, days26.length);
+  var labels2 = Array.from({length:maxDays},function(_,i){return (i+1)+'º dia';});
+  var cum25 = cumSum(days25.map(function(d){return d.fat;}));
+  var cum26 = cumSum(days26.map(function(d){return d.fat;}));
+
+  ch('fd-chart-acum',{
+    data:{labels:labels2,datasets:[
+      {label:'2025',data:cum25,borderColor:C25,backgroundColor:'#378ADD11',fill:true,tension:0.3,pointRadius:0,borderWidth:2},
+      {label:'2026',data:cum26,borderColor:C26,backgroundColor:'#E24B4A11',fill:true,tension:0.3,pointRadius:0,borderWidth:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,
+        callbacks:{label:function(c){return c.dataset.label+': '+brl(c.parsed.y);}}}},
+      scales:{x:{ticks:{color:'#888',font:{size:10},maxTicksLimit:20},grid:{display:false}},
+              y:{ticks:{color:'#888',font:{size:11},callback:function(v){return brl(v);}},
+                 grid:{color:'rgba(128,128,128,.1)'}}}}
+  });
+  document.getElementById('fd-leg-acum').innerHTML=
+    '<span style="display:flex;align-items:center;gap:4px"><span style="width:20px;height:3px;background:'+C25+';display:inline-block"></span>2025</span>'+
+    '<span style="display:flex;align-items:center;gap:4px"><span style="width:20px;height:3px;background:'+C26+';display:inline-block"></span>2026</span>';
+
+  // ── Chart 3: Dia a dia 2025 vs 2026 ────────────────
+  var maxD = Math.max(days25.length, days26.length);
+  var lblCmp = Array.from({length:maxD},function(_,i){return (i+1)+'º dia útil';});
+  var fat25 = days25.map(function(d){return d.fat;});
+  var fat26 = days26.map(function(d){return d.fat;});
+
+  ch('fd-chart-cmp',{
+    data:{labels:lblCmp,datasets:[
+      {type:'line',label:'2025',data:fat25,borderColor:C25,backgroundColor:'transparent',pointRadius:2,tension:0.3,borderWidth:1.5},
+      {type:'line',label:'2026',data:fat26,borderColor:C26,backgroundColor:'transparent',pointRadius:2,tension:0.3,borderWidth:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,
+        callbacks:{label:function(c){return c.dataset.label+': '+brl(c.parsed.y);}}}},
+      scales:{x:{ticks:{color:'#888',font:{size:10},maxTicksLimit:20},grid:{display:false}},
+              y:{ticks:{color:'#888',font:{size:11},callback:function(v){return brl(v);}},
+                 grid:{color:'rgba(128,128,128,.1)'}}}}
+  });
+  document.getElementById('fd-leg-cmp').innerHTML=
+    '<span style="display:flex;align-items:center;gap:4px"><span style="width:20px;height:3px;background:'+C25+';display:inline-block"></span>2025</span>'+
+    '<span style="display:flex;align-items:center;gap:4px"><span style="width:20px;height:3px;background:'+C26+';display:inline-block"></span>2026</span>';
+
+  // ── Chart 4: Média diária por mês ──────────────────
+  var mLabels=[], med25=[], med26=[];
+  for(var m=0;m<12;m++){
+    var d25=(FAT_DIARIO[2025]&&FAT_DIARIO[2025][m])||[];
+    var d26=(FAT_DIARIO[2026]&&FAT_DIARIO[2026][m])||[];
+    if(d25.length>0||d26.length>0){
+      mLabels.push(MS2[m]);
+      med25.push(d25.length>0?d25.reduce(function(s,d){return s+d.f;},0)/d25.length:null);
+      med26.push(d26.length>0?d26.reduce(function(s,d){return s+d.f;},0)/d26.length:null);
+    }
+  }
+  ch('fd-chart-media',{
+    data:{labels:mLabels,datasets:[
+      {type:'bar',label:'2025',data:med25,backgroundColor:C25+'99',borderColor:C25,borderWidth:1,borderRadius:3},
+      {type:'bar',label:'2026',data:med26,backgroundColor:C26+'99',borderColor:C26,borderWidth:1,borderRadius:3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+brl(c.parsed.y)+'/dia';} }}},
+      scales:{x:{ticks:{color:'#888',font:{size:11}},grid:{display:false}},
+              y:{ticks:{color:'#888',font:{size:11},callback:function(v){return brl(v);}},
+                 grid:{color:'rgba(128,128,128,.1)'}}}}
+  });
+  document.getElementById('fd-leg-media').innerHTML=
+    '<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:'+C25+'99;border-radius:2px"></span>2025</span>'+
+    '<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:'+C26+'99;border-radius:2px"></span>2026</span>';
+
+  // ── Analysis 5: Dias abaixo da média ───────────────
+  var baixos = days.filter(function(d){return d.fat < media*0.7;});
+  var el5 = document.getElementById('fd-dias-baixos');
+  if(baixos.length===0){
+    el5.innerHTML='<p style="color:#1D9E75;font-size:13px;padding:.5rem">Nenhum dia com faturamento abaixo de 70% da média no período.</p>';
+  } else {
+    var rows5 = baixos.map(function(d){
+      var pct=(d.fat/media*100).toFixed(0);
+      return '<tr style="border-bottom:.5px solid var(--border)">'+
+        '<td style="padding:.5rem .75rem;font-weight:500">'+d.label+'</td>'+
+        '<td style="padding:.5rem .75rem">'+brl(d.fat)+'</td>'+
+        '<td style="padding:.5rem .75rem;color:var(--text-muted)">'+brl(media)+' (média)</td>'+
+        '<td style="padding:.5rem .75rem;color:#E24B4A;font-weight:600">'+pct+'% da média</td>'+
+      '</tr>';
+    }).join('');
+    el5.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+      '<thead><tr><th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;border-bottom:.5px solid var(--border-strong)">Dia</th>'+
+      '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;border-bottom:.5px solid var(--border-strong)">Faturamento</th>'+
+      '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;border-bottom:.5px solid var(--border-strong)">Referência</th>'+
+      '<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;border-bottom:.5px solid var(--border-strong)">% da média</th>'+
+      '</tr></thead><tbody>'+rows5+'</tbody></table>';
+  }
+
+  // ── Analysis 6+7: Correlação cargas x faturamento ──
+  var el6 = document.getElementById('fd-correlacao');
+  // Build a date->fat map for the selected year
+  var fatMap={};
+  var yearDays = getDays(ano, -1);
+  yearDays.forEach(function(d){
+    // key: mes*100+dia
+    fatMap[d.mes*100+d.dia] = d.fat;
+  });
+
+  // Get cargas that arrived in selected year
+  var cargasAno=[];
+  if(CARGAS_DB[ano]){
+    Object.keys(CARGAS_DB[ano]).forEach(function(m){
+      (CARGAS_DB[ano][m]||[]).forEach(function(c){
+        if(c.real){
+          var dt=new Date(c.real);
+          if(!isNaN(dt)){
+            cargasAno.push({
+              fornecedor:c.fornecedor, material:c.material,
+              mes:dt.getMonth(), dia:dt.getDate(),
+              prog_kg:c.prog_kg, atraso:c.atraso
+            });
+          }
+        }
+      });
+    });
+  }
+
+  if(cargasAno.length===0){
+    el6.innerHTML='<p style="font-size:13px;color:var(--text-muted);padding:.5rem">Sem dados de chegada de cargas para o período selecionado.</p>';
+    return;
+  }
+
+  // For each carga, compute avg fat 5 days before and after arrival
+  // Since we only have day numbers (not full dates), use positional approach
+  var allDaysSorted = yearDays.slice().sort(function(a,b){
+    return (a.mes*100+a.dia)-(b.mes*100+b.dia);
+  });
+
+  function avgAround(mes, dia, before, after){
+    var key = mes*100+dia;
+    var idx2 = allDaysSorted.findIndex(function(d){return d.mes===mes&&d.dia===dia;});
+    var lookup = before ? allDaysSorted.slice(Math.max(0,idx2-5),idx2)
+                        : allDaysSorted.slice(idx2+1,Math.min(allDaysSorted.length,idx2+6));
+    if(lookup.length===0) return null;
+    return lookup.reduce(function(s,d){return s+d.fat;},0)/lookup.length;
+  }
+
+  var corrRows = cargasAno.map(function(c){
+    var antes  = avgAround(c.mes, c.dia, true, false);
+    var depois = avgAround(c.mes, c.dia, false, true);
+    var diff   = (antes&&depois) ? depois-antes : null;
+    return {c:c, antes:antes, depois:depois, diff:diff};
+  });
+
+  var tbl='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>';
+  ['Carga','Material','Chegada','Atraso','Média 5d antes','Média 5d depois','Variação'].forEach(function(h){
+    tbl+='<th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;border-bottom:.5px solid var(--border-strong)">'+h+'</th>';
+  });
+  tbl+='</tr></thead><tbody>';
+
+  corrRows.forEach(function(r){
+    var MS3=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    var chegada = MS3[r.c.mes]+'/'+r.c.dia;
+    var atrasoStr = r.c.atraso>0
+      ? '<span style="color:#E24B4A;font-weight:600">'+r.c.atraso+'d atrasado</span>'
+      : '<span style="color:#1D9E75">No prazo</span>';
+    var diffStr = r.diff!==null
+      ? '<span style="color:'+(r.diff>=0?'#1D9E75':'#E24B4A')+';font-weight:600">'+(r.diff>=0?'+':'')+brl(r.diff)+'</span>'
+      : '—';
+    tbl+='<tr style="border-bottom:.5px solid var(--border)">'+
+      '<td style="padding:.5rem .75rem;font-weight:500">'+r.c.fornecedor+'</td>'+
+      '<td style="padding:.5rem .75rem">'+r.c.material+'</td>'+
+      '<td style="padding:.5rem .75rem">'+chegada+'</td>'+
+      '<td style="padding:.5rem .75rem">'+atrasoStr+'</td>'+
+      '<td style="padding:.5rem .75rem">'+(r.antes!==null?brl(r.antes):'—')+'</td>'+
+      '<td style="padding:.5rem .75rem">'+(r.depois!==null?brl(r.depois):'—')+'</td>'+
+      '<td style="padding:.5rem .75rem">'+diffStr+'</td>'+
+    '</tr>';
+  });
+  tbl+='</tbody></table>';
+  el6.innerHTML=tbl;
 }
 
 </script>
