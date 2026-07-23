@@ -264,8 +264,8 @@ html.light-mode {
   <button id="btn-dados" onclick="openModal()" style="display:none"></button>
   <div class="header-right">
     <button onclick="openExport()" style="font-family:inherit;font-size:13px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);padding:5px 12px;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:6px"><i class="ti ti-download" style="font-size:14px"></i> Exportar</button>
-    <button onclick="doLogout()" title="Sair" style="font-family:inherit;font-size:13px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);padding:5px 10px;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:5px"><i class="ti ti-logout" style="font-size:14px"></i></button>
-    <button onclick="clearPersistedData()" title="Apagar dados de vendas/cargas salvos neste navegador" style="font-family:inherit;font-size:13px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);padding:5px 10px;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:5px"><i class="ti ti-trash" style="font-size:14px"></i></button>
+    
+    
     <button id="btn-dark" onclick="toggleDark()" title="Alternar tema" style="font-family:inherit;font-size:13px;background:var(--surface2);border:.5px solid var(--border-strong);border-radius:var(--radius-md);padding:5px 10px;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:5px"><i class="ti ti-moon" id="dark-icon" style="font-size:15px"></i></button>
     <select id="ano-select"><option value="2025">2025</option><option value="2026" selected>2026</option></select>
     <select id="mes-select">
@@ -4385,11 +4385,12 @@ async function loadFatDiario(){
 
 // ── Modal controls ───────────────────────────────────────────
 function openFdModal(){
-  // Default to today
-  var today = new Date();
-  var dd = String(today.getDate()).padStart(2,'0');
-  var mm = String(today.getMonth()+1).padStart(2,'0');
-  var yyyy = today.getFullYear();
+  // Default to yesterday
+  var yesterday = new Date();
+  yesterday.setDate(yesterday.getDate()-1);
+  var dd = String(yesterday.getDate()).padStart(2,'0');
+  var mm = String(yesterday.getMonth()+1).padStart(2,'0');
+  var yyyy = yesterday.getFullYear();
   document.getElementById('fd-input-data').value = yyyy+'-'+mm+'-'+dd;
   document.getElementById('fd-input-fat').value = '';
   document.getElementById('fd-modal-err').style.display='none';
@@ -4422,9 +4423,11 @@ async function saveFdDia(){
   btn.textContent='Salvando...'; btn.disabled=true;
 
   try{
+    var h = getHeaders();
+    h['Prefer'] = 'resolution=merge-duplicates,return=minimal';
     var res = await fetch(SUPA_URL+'/rest/v1/fat_diario',{
       method:'POST',
-      headers: Object.assign({},getHeaders(),{'Prefer':'resolution=merge-duplicates,return=minimal'}),
+      headers: h,
       body: JSON.stringify({ano:ano, mes:mes, dia:dia, fat:fatVal})
     });
     if(!res.ok){
